@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,11 +17,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "UrchenziConnect",
+    default: "UrchenziConnect - Fast Delivery at Your Door",
     template: "%s | UrchenziConnect",
   },
   description:
-    "Order from local restaurants, groceries, and pharmacies with real-time delivery tracking.",
+    "Order food, groceries, flowers, and more from local vendors. Fast delivery in minutes with real-time tracking. Download the UrchenziConnect app today!",
+  keywords: ["delivery", "food", "groceries", "pharmacy", "marketplace", "fast delivery"],
+  authors: [{ name: "UrchenziConnect" }],
+  openGraph: {
+    title: "UrchenziConnect - Everything Delivered in Minutes",
+    description: "Fast delivery service for food, groceries, and more",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -33,10 +41,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-background text-foreground">
+      <body className="min-h-full bg-background text-foreground flex flex-col">
         <Providers>
           <Navbar />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-8">{children}</main>
+          <Footer />
         </Providers>
       </body>
     </html>

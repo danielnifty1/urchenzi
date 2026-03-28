@@ -21,22 +21,33 @@ export const ProductCard = ({ product }: { product: Product }) => {
   };
 
   return (
-    <article className="flex gap-3 rounded-2xl border border-border bg-surface p-3">
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl">
-        <Image src={product.image} alt={product.name} fill className="object-cover" />
+    <article className="flex gap-3 rounded-2xl border border-border bg-surface p-3 hover:border-brand hover:shadow-md transition group">
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-200 group-hover:scale-105 transition">
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          className="object-cover"
+        />
       </div>
-      <div className="flex flex-1 flex-col justify-between">
+      <div className="flex flex-1 flex-col justify-between min-w-0">
         <div>
-          <h4 className="font-semibold text-foreground">{product.name}</h4>
-          <p className="line-clamp-2 text-sm text-muted">{product.description}</p>
+          <h4 className="font-semibold text-foreground text-sm md:text-base line-clamp-1">
+            {product.name}
+          </h4>
+          <p className="line-clamp-2 text-xs md:text-sm text-muted">
+            {product.description}
+          </p>
         </div>
         <div className="flex items-center justify-between">
-          <span className="font-medium text-foreground">{formatCurrency(product.price)}</span>
+          <span className="text-sm md:text-base font-bold text-brand">
+            {formatCurrency(product.price)}
+          </span>
           <button
             onClick={onAdd}
-            className="rounded-full bg-brand-strong px-3 py-1.5 text-sm text-white"
+            className="rounded-lg bg-brand px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-white hover:bg-brand-dark transition shrink-0"
           >
-            Add
+            + Add
           </button>
         </div>
       </div>
