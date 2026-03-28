@@ -11,38 +11,71 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-8 text-center">
-        <h1 className="text-xl font-semibold">Your cart is empty</h1>
-        <p className="mt-2 text-muted">Add items from a vendor to continue.</p>
-        <Link
-          href="/"
-          className="mt-4 inline-flex rounded-full bg-brand-strong px-4 py-2 text-sm text-white"
-        >
-          Browse vendors
-        </Link>
+      <div className="space-y-6 text-center py-12">
+        <div className="text-5xl">🛒</div>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Cart is Empty</h1>
+          <p className="text-muted mb-6">Add delicious items from vendors to get started</p>
+          <Link
+            href="/"
+            className="inline-block rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-brand-dark transition"
+          >
+            Browse Vendors
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-bold">Cart</h1>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <CartItem key={item.id} item={item} />
-        ))}
+    <section className="space-y-8">
+      <div className="rounded-3xl bg-brand p-8 text-white">
+        <h1 className="text-4xl font-bold mb-2">Your Cart</h1>
+        <p className="text-white/80">Review items and proceed to checkout</p>
       </div>
-      <div className="rounded-2xl border border-border bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-muted">Total</span>
-          <span className="text-lg font-semibold">{formatCurrency(subtotal)}</span>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <div className="rounded-2xl bg-surface border border-border p-6 space-y-3">
+            <h2 className="text-xl font-bold text-foreground mb-4">Items ({items.length})</h2>
+            {items.map((item) => (
+              <CartItem key={item.id} item={item} />
+            ))}
+          </div>
         </div>
-        <Link
-          href="/checkout"
-          className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-[#10131a]"
-        >
-          Proceed to checkout
-        </Link>
+
+        <div className="rounded-2xl bg-surface border border-border p-6 h-fit sticky top-24">
+          <h2 className="text-xl font-bold text-foreground mb-4">Summary</h2>
+          <div className="space-y-3 mb-6 pb-4 border-b border-border">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Subtotal</span>
+              <span className="font-medium">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Delivery</span>
+              <span className="font-medium">{formatCurrency(2.5)}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-between text-lg font-bold mb-6">
+            <span>Total</span>
+            <span className="text-brand">{formatCurrency(subtotal + 2.5)}</span>
+          </div>
+
+          <Link
+            href="/checkout"
+            className="block w-full rounded-lg bg-brand px-4 py-3 text-center font-bold text-white hover:bg-brand-dark transition mb-3"
+          >
+            Proceed to Checkout
+          </Link>
+
+          <Link
+            href="/"
+            className="block w-full rounded-lg border-2 border-border px-4 py-3 text-center font-semibold text-foreground hover:border-brand hover:bg-brand/5 transition"
+          >
+            Continue Shopping
+          </Link>
+        </div>
       </div>
     </section>
   );

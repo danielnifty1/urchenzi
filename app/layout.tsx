@@ -16,11 +16,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "UrchenziConnect",
+    default: "UrchenziConnect - Fast Delivery at Your Door",
     template: "%s | UrchenziConnect",
   },
   description:
-    "Order from local restaurants, groceries, and pharmacies with real-time delivery tracking.",
+    "Order food, groceries, flowers, and more from local vendors. Fast delivery in minutes with real-time tracking. Download the UrchenziConnect app today!",
+  keywords: ["delivery", "food", "groceries", "pharmacy", "marketplace", "fast delivery"],
+  authors: [{ name: "UrchenziConnect" }],
+  openGraph: {
+    title: "UrchenziConnect - Everything Delivered in Minutes",
+    description: "Fast delivery service for food, groceries, and more",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
