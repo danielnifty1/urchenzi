@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { VendorCard } from "@/components/VendorCard";
+import { DownloadAppSection } from "@/components/DownloadAppSection";
+import { PartnersSection } from "@/components/PartnersSection";
+import { WhyChooseUsSection } from "@/components/WhyChooseUsSection";
 import { useVendors } from "@/hooks/useMarketplace";
 import { VendorCategory } from "@/types";
 
@@ -148,6 +151,12 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      <DownloadAppSection />
+
+      <PartnersSection />
+
+      <WhyChooseUsSection />
     </section>
   );
 }
