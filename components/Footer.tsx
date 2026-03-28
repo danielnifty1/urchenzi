@@ -41,15 +41,19 @@ export const Footer = () => {
           {/* Brand Section */}
           <div className="md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="text-3xl font-bold text-brand">🚀</div>
+              <div className="flex items-center gap-0.5">
+                <div className="font-black text-accent text-2xl">U</div>
+                <div className="font-black text-white text-2xl">C</div>
+              </div>
               <div>
-                <div className="font-bold text-lg">Urchenzi</div>
-                <div className="text-xs text-white/70">Connect</div>
+                <div className="font-bold text-lg">URCHENZI</div>
+                <div className="text-xs text-white/70">CONNECT</div>
               </div>
             </Link>
             <p className="text-sm text-white/70 leading-relaxed">
-              Fast delivery of everything you need, from restaurants to groceries, right to your door.
+              We connect people, goods, and businesses seamlessly. Your community marketplace for everything you need.
             </p>
+            <p className="text-sm font-semibold text-accent">www.urchenziconnect.com</p>
             {/* Social Links */}
             <div className="flex gap-4 pt-2">
               <a

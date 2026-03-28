@@ -19,6 +19,12 @@ const CATEGORIES = [
   { id: "quick-commerce", label: "Quick", icon: "⚡" },
 ] as const;
 
+const SORT_OPTIONS = [
+  { value: "rating" as const, label: "Top rated", icon: "⭐" },
+  { value: "delivery" as const, label: "Fastest", icon: "⚡" },
+  { value: "fee" as const, label: "Cheapest", icon: "💰" },
+];
+
 export default function HomePage() {
   const { data: vendors, isLoading, isError } = useVendors();
   const [search, setSearch] = useState("");
@@ -52,17 +58,17 @@ export default function HomePage() {
 
   return (
     <section className="space-y-8">
-      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand to-brand-dark px-6 py-12 md:px-12 md:py-16">
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-brand-dark to-brand px-6 py-12 md:px-12 md:py-16">
         <div className="mx-auto max-w-3xl space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-widest text-white/80">
-              Welcome to UrchenziConnect
+          <div className="space-y-3">
+            <p className="text-sm font-bold uppercase tracking-widest text-accent">
+              Your Community, Connected
             </p>
             <h1 className="text-balance text-4xl font-bold leading-tight text-white md:text-5xl">
-              Everything delivered in minutes
+              We connect people, goods, and businesses seamlessly
             </h1>
             <p className="text-lg text-white/90">
-              Food, groceries, flowers, and more from your favorite local shops.
+              On-demand delivery, vendor marketplace, services & errands, and integrated payments—all in one app.
             </p>
           </div>
 
@@ -108,19 +114,17 @@ export default function HomePage() {
         <div className="flex items-center justify-between rounded-2xl bg-surface p-4">
           <h2 className="text-xl font-bold text-foreground">Available now</h2>
           <div className="flex gap-2">
-            {(["rating", "delivery", "fee"] as const).map((option) => (
+            {SORT_OPTIONS.map((option) => (
               <button
-                key={option}
-                onClick={() => setSortBy(option)}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition ${
-                  sortBy === option
+                key={option.value}
+                onClick={() => setSortBy(option.value)}
+                className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
+                  sortBy === option.value
                     ? "bg-brand text-white"
                     : "bg-background text-muted hover:bg-border"
                 }`}
               >
-                {option === "rating" && "⭐ Top rated"}
-                {option === "delivery" && "⚡ Fastest"}
-                {option === "fee" && "💰 Cheapest"}
+                {option.icon} {option.label}
               </button>
             ))}
           </div>

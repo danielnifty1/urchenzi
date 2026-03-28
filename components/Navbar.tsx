@@ -20,12 +20,15 @@ export const Navbar = () => {
       <nav className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="text-2xl font-bold text-brand">🚀</div>
+            <div className="flex items-center gap-1">
+              <div className="font-black text-brand text-2xl">U</div>
+              <div className="font-black text-accent text-2xl">C</div>
+            </div>
             <div className="hidden sm:block">
-              <div className="text-sm font-extrabold tracking-tight text-foreground">
-                Urchenzi
+              <div className="text-xs font-bold tracking-wider text-foreground">
+                URCHENZI CONNECT
               </div>
-              <div className="text-xs text-muted">Connect</div>
+              <div className="text-xs text-muted font-medium">Your Community, Connected</div>
             </div>
           </Link>
 
