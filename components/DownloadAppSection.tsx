@@ -21,14 +21,14 @@ export const DownloadAppSection = () => {
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <a
               href="#"
-              className="flex items-center justify-center gap-3 px-6 py-3 bg-white text-brand font-bold rounded-full hover:bg-accent transition shadow-lg hover:shadow-xl"
+              className="flex items-center justify-center gap-3 px-6 py-3 bg-accent text-brand font-bold rounded-full hover:bg-white transition shadow-lg hover:shadow-xl"
             >
               <span className="text-xl">🍎</span>
               App Store
             </a>
             <a
               href="#"
-              className="flex items-center justify-center gap-3 px-6 py-3 bg-white text-brand font-bold rounded-full hover:bg-accent transition shadow-lg hover:shadow-xl"
+              className="flex items-center justify-center gap-3 px-6 py-3 bg-accent text-brand font-bold rounded-full hover:bg-white transition shadow-lg hover:shadow-xl"
             >
               <span className="text-xl">🤖</span>
               Google Play
