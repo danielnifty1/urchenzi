@@ -4,32 +4,16 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { signInWithGoogle, signUpWithEmail } from "@/lib/firebase/auth";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
 
-function googleAuthErrorMessage(code: string): string {
-  switch (code) {
-    case "auth/popup-closed-by-user":
-      return "Sign-in was cancelled.";
-    case "auth/popup-blocked":
-      return "Pop-up was blocked. Allow pop-ups for this site.";
-    default:
-      return "Google sign-in failed. Try again.";
-  }
-}
-
-function emailAuthErrorMessage(code: string): string {
-  switch (code) {
-    case "auth/email-already-in-use":
-      return "This email is already registered. Sign in on the login page.";
-    case "auth/invalid-email":
-      return "Enter a valid email address.";
-    case "auth/weak-password":
-      return "Use a stronger password (at least 6 characters).";
-    default:
-      return "Something went wrong. Try again.";
-  }
+function splitFullName(full: string): { firstName: string; lastName: string } {
+  const t = full.trim();
+  if (!t) return { firstName: "", lastName: "" };
+  const parts = t.split(/\s+/);
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 }
 
 export default function RegisterPage() {
@@ -41,25 +25,8 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const firebaseReady = isFirebaseConfigured();
-
-  const onGoogle = async () => {
-    if (!firebaseReady) {
-      toast.error("Configure Firebase in .env.local to use Google.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const session = await signInWithGoogle();
-      login(session);
-      toast.success("Signed in with Google.");
-      router.push("/");
-    } catch (err: unknown) {
-      const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
-      toast.error(googleAuthErrorMessage(code));
-    } finally {
-      setBusy(false);
-    }
+  const onGoogle = () => {
+    window.location.href = googleAuthRedirectUrl();
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -69,31 +36,28 @@ export default function RegisterPage() {
       toast.error("Passwords do not match.");
       return;
     }
-    if (firebaseReady) {
-      if (password.length < 6) {
-        toast.error("Password must be at least 6 characters.");
-        return;
-      }
-      setBusy(true);
-      try {
-        const session = await signUpWithEmail(email.trim(), password);
-        login({
-          ...session,
-          name: name.trim() || session.name,
-        });
-        toast.success("Account created.");
-        router.push("/");
-      } catch (err: unknown) {
-        const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
-        toast.error(emailAuthErrorMessage(code));
-      } finally {
-        setBusy(false);
-      }
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
       return;
     }
-    login({ id: "u1", name: name.trim(), email: email.trim() });
-    toast.success("Account created (demo — add Firebase for production auth).");
-    router.push("/");
+    setBusy(true);
+    try {
+      const { firstName, lastName } = splitFullName(name);
+      const session = await registerWithPassword({
+        email: email.trim(),
+        password,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        role: "customer",
+      });
+      login({ ...session, name: name.trim() });
+      toast.success("Account created.");
+      router.push("/");
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -113,7 +77,7 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={onGoogle}
-          disabled={busy || !firebaseReady}
+          disabled={busy}
           className="w-full rounded-full border border-border bg-background py-3 text-sm font-semibold disabled:opacity-50"
         >
           Continue with Google
@@ -150,7 +114,7 @@ export default function RegisterPage() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
-          minLength={firebaseReady ? 6 : undefined}
+          minLength={8}
         />
         <input
           type="password"
@@ -159,7 +123,7 @@ export default function RegisterPage() {
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           required
-          minLength={firebaseReady ? 6 : undefined}
+          minLength={8}
         />
         <button
           type="submit"

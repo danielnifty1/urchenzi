@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/components/AuthProvider";
+import { FirebaseAnalytics } from "@/components/FirebaseAnalytics";
 import { ThemeController } from "@/components/ThemeController";
 
 export const Providers = ({ children }: { children: React.ReactNode }) => {
@@ -22,6 +23,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeController />
+      <FirebaseAnalytics />
       <AuthProvider>{children}</AuthProvider>
       <Toaster position="top-right" />
     </QueryClientProvider>

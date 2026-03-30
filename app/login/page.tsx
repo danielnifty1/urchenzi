@@ -4,47 +4,11 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import {
-  signInWithEmail,
-  signInWithGoogle,
-  signUpWithEmail,
-} from "@/lib/firebase/auth";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { loginWithPassword, registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
 
 type Mode = "signin" | "signup";
-
-function googleAuthErrorMessage(code: string): string {
-  switch (code) {
-    case "auth/popup-closed-by-user":
-      return "Sign-in was cancelled.";
-    case "auth/popup-blocked":
-      return "Pop-up was blocked. Allow pop-ups for this site.";
-    case "auth/account-exists-with-different-credential":
-      return "An account already exists with a different sign-in method.";
-    default:
-      return "Google sign-in failed. Try again.";
-  }
-}
-
-function emailAuthErrorMessage(code: string): string {
-  switch (code) {
-    case "auth/email-already-in-use":
-      return "This email is already registered. Switch to Sign in.";
-    case "auth/invalid-email":
-      return "Enter a valid email address.";
-    case "auth/weak-password":
-      return "Use a stronger password (at least 6 characters).";
-    case "auth/user-not-found":
-    case "auth/wrong-password":
-    case "auth/invalid-credential":
-      return "Invalid email or password.";
-    case "auth/too-many-requests":
-      return "Too many attempts. Try again later.";
-    default:
-      return "Something went wrong. Try again.";
-  }
-}
 
 function GoogleIcon() {
   return (
@@ -78,69 +42,43 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const firebaseReady = isFirebaseConfigured();
-
-  const onGoogle = async () => {
-    if (!firebaseReady) {
-      toast.error("Add Firebase keys to .env.local to enable Google sign-in.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const session = await signInWithGoogle();
-      login(session);
-      toast.success(
-        mode === "signup" ? "Account created with Google." : "Signed in with Google.",
-      );
-      router.push("/");
-    } catch (err: unknown) {
-      const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
-      toast.error(googleAuthErrorMessage(code));
-    } finally {
-      setBusy(false);
-    }
+  const onGoogle = () => {
+    window.location.href = googleAuthRedirectUrl();
   };
 
   const onEmailSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!email.trim() || !password) return;
 
-    if (firebaseReady) {
-      if (mode === "signup") {
-        if (password !== confirmPassword) {
-          toast.error("Passwords do not match.");
-          return;
-        }
-        if (password.length < 6) {
-          toast.error("Password must be at least 6 characters.");
-          return;
-        }
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match.");
+        return;
       }
-      setBusy(true);
-      try {
-        const session =
-          mode === "signin"
-            ? await signInWithEmail(email.trim(), password)
-            : await signUpWithEmail(email.trim(), password);
-        login(session);
-        toast.success(mode === "signin" ? "Welcome back." : "Account created.");
-        router.push("/");
-      } catch (err: unknown) {
-        const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
-        toast.error(emailAuthErrorMessage(code));
-      } finally {
-        setBusy(false);
+      if (password.length < 8) {
+        toast.error("Password must be at least 8 characters.");
+        return;
       }
-      return;
     }
 
-    if (mode === "signup") {
-      toast.error("Email sign-up requires Firebase. Configure .env.local or use demo sign-in.");
-      return;
+    setBusy(true);
+    try {
+      const session =
+        mode === "signin"
+          ? await loginWithPassword(email.trim(), password)
+          : await registerWithPassword({
+              email: email.trim(),
+              password,
+              role: "customer",
+            });
+      login(session);
+      toast.success(mode === "signin" ? "Welcome back." : "Account created.");
+      router.push("/");
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setBusy(false);
     }
-    login({ id: "demo", name: "Demo User", email: email.trim() });
-    toast.success("Welcome (demo mode — add Firebase for real auth).");
-    router.push("/");
   };
 
   return (
@@ -148,16 +86,6 @@ export default function LoginPage() {
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-foreground">Welcome</h1>
         <p className="mt-1 text-sm text-muted">Sign in or create an account to continue.</p>
-
-        {!firebaseReady && (
-          <p className="mt-4 rounded-xl border border-brand/30 bg-brand/10 px-3 py-2 text-xs text-foreground">
-            Firebase is not configured. Google sign-in is disabled. Email sign-in uses a{" "}
-            <strong>demo</strong> session only. Copy{" "}
-            <code className="rounded bg-background px-1">env.example</code> to{" "}
-            <code className="rounded bg-background px-1">.env.local</code> and add your web app keys
-            from the Firebase console (Authentication → Sign-in method → Google).
-          </p>
-        )}
 
         <div className="mt-6 flex rounded-full border border-border bg-background p-1">
           <button
@@ -183,7 +111,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={onGoogle}
-          disabled={busy || !firebaseReady}
+          disabled={busy}
           className="mt-6 flex w-full items-center justify-center gap-3 rounded-full border border-border bg-background py-3 text-sm font-semibold text-foreground transition hover:bg-background/80 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <GoogleIcon />
@@ -217,9 +145,9 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={firebaseReady && mode === "signup" ? 6 : undefined}
+            minLength={mode === "signup" ? 8 : undefined}
           />
-          {mode === "signup" && firebaseReady && (
+          {mode === "signup" && (
             <input
               type="password"
               autoComplete="new-password"
@@ -228,7 +156,7 @@ export default function LoginPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
             />
           )}
           <button

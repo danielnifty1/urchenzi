@@ -63,11 +63,31 @@ export type Order = {
   createdAt: string;
 };
 
+/** Backend user payload from /auth/login (and similar). */
+export type ApiAuthUser = {
+  id: string;
+  userid: string;
+  role: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+};
+
+export type AuthLoginResponse = {
+  message: string;
+  access_token: string;
+  user: ApiAuthUser;
+};
+
 export type UserSession = {
   id: string;
   name: string;
   email: string;
   photoURL?: string;
+  /** External auth id when using API backend */
+  userid?: string;
+  role?: string;
 };
 
 export type Address = {

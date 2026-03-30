@@ -1,9 +1,11 @@
 import {
   createUserWithEmailAndPassword,
+  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -19,12 +21,44 @@ export function mapFirebaseUser(user: User): UserSession {
   };
 }
 
-export async function signInWithGoogle(): Promise<UserSession> {
+export function shouldUseGooglePopup(): boolean {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return h === "localhost" || h === "127.0.0.1";
+}
+
+const googleProvider = () => {
+  const p = new GoogleAuthProvider();
+  p.addScope("profile");
+  p.addScope("email");
+  p.setCustomParameters({ prompt: "select_account" });
+  return p;
+};
+
+export async function signInWithGoogle(): Promise<UserSession | null> {
   const auth = getFirebaseAuth();
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: "select_account" });
-  const { user } = await signInWithPopup(auth, provider);
-  return mapFirebaseUser(user);
+  const provider = googleProvider();
+
+  if (shouldUseGooglePopup()) {
+    const { user } = await signInWithPopup(auth, provider);
+    return mapFirebaseUser(user);
+  }
+
+  await signInWithRedirect(auth, provider);
+  return null;
+}
+
+export async function startGoogleSignInRedirect(): Promise<void> {
+  const auth = getFirebaseAuth();
+  await signInWithRedirect(auth, googleProvider());
+}
+
+export async function completeGoogleRedirectSignIn(): Promise<UserSession | null> {
+  const auth = getFirebaseAuth();
+  await auth.authStateReady();
+  const result = await getRedirectResult(auth);
+  if (!result?.user) return null;
+  return mapFirebaseUser(result.user);
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<UserSession> {
@@ -57,7 +91,8 @@ export function subscribeAuth(callback: (session: UserSession | null) => void): 
     return onAuthStateChanged(auth, (user) => {
       callback(user ? mapFirebaseUser(user) : null);
     });
-  } catch {
+  } catch (err) {
+    console.error("[Firebase] onAuthStateChanged failed — check Authentication + Identity Toolkit API for this project:", err);
     return () => {};
   }
 }
