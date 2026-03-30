@@ -38,7 +38,7 @@ export const Footer = () => {
   const showHomeWave = pathname === "/";
 
   return (
-    <footer className="bg-foreground text-white">
+    <footer className="bg-gradient-to-b from-[#1a1a1a] to-[#10131a] text-white">
       {showHomeWave && (
         <div className="relative z-0 -mt-14 w-full leading-[0] text-[#1a1a1a] dark:text-[#0a0a0a] md:-mt-20">
           <svg
@@ -55,6 +55,18 @@ export const Footer = () => {
         </div>
       )}
       <div className="mx-auto max-w-6xl px-4 py-16 md:py-20">
+        <div className="mb-10 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm md:flex md:items-center md:justify-between md:gap-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Community first delivery</p>
+            <h3 className="mt-2 text-xl font-bold text-white">Everything nearby, delivered with style.</h3>
+          </div>
+          <a
+            href="#"
+            className="mt-4 inline-flex rounded-full bg-accent px-5 py-2 text-sm font-semibold text-black transition hover:brightness-95 md:mt-0"
+          >
+            Start ordering
+          </a>
+        </div>
         {/* Main Footer Content */}
         <div className="grid gap-12 md:grid-cols-5 mb-12">
           {/* Brand Section */}

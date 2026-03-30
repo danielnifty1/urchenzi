@@ -10,7 +10,7 @@ export const VendorCard = ({ vendor }: { vendor: Vendor }) => {
   return (
     <Link
       href={`/vendor/${vendor.id}`}
-      className="group relative overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+      className="group relative overflow-hidden rounded-2xl border border-border/80 bg-surface shadow-sm transition hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(0,0,0,0.14)]"
     >
       <div className="relative h-40 w-full overflow-hidden bg-gray-200">
         <Image
@@ -38,9 +38,9 @@ export const VendorCard = ({ vendor }: { vendor: Vendor }) => {
         )}
       </div>
 
-      <div className="space-y-2 p-4">
+      <div className="space-y-2 bg-gradient-to-b from-transparent to-background/20 p-4">
         <div>
-          <h3 className="text-base font-bold text-foreground">{vendor.name}</h3>
+          <h3 className="text-base font-bold text-foreground group-hover:text-brand">{vendor.name}</h3>
           <p className="text-xs text-muted capitalize">{vendor.category}</p>
         </div>
 
