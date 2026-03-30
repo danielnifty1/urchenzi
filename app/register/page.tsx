@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
@@ -17,7 +16,6 @@ function splitFullName(full: string): { firstName: string; lastName: string } {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
   const login = useUserStore((state) => state.login);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -52,7 +50,7 @@ export default function RegisterPage() {
       });
       login({ ...session, name: name.trim() });
       toast.success("Account created.");
-      router.push("/");
+      window.location.assign("/");
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {

@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { loginWithPassword, registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
@@ -34,7 +33,6 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const login = useUserStore((state) => state.login);
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -73,7 +71,7 @@ export default function LoginPage() {
             });
       login(session);
       toast.success(mode === "signin" ? "Welcome back." : "Account created.");
-      router.push("/");
+      window.location.assign("/");
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
