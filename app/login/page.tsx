@@ -71,7 +71,13 @@ export default function LoginPage() {
             });
       login(session);
       toast.success(mode === "signin" ? "Welcome back." : "Account created.");
-      window.location.assign("/");
+      
+      // Check if user needs to complete onboarding
+      if (session.status === "pending") {
+        window.location.assign("/onboarding/select-role");
+      } else {
+        window.location.assign("/");
+      }
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
