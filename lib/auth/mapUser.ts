@@ -11,6 +11,7 @@ export function apiUserToSession(u: ApiAuthUser, displayNameOverride?: string): 
     id: u.id,
     userid: u.userid,
     role: u.role,
+    status: u.status,
     email: u.email,
     name,
   };

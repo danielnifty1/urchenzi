@@ -68,6 +68,7 @@ export type ApiAuthUser = {
   id: string;
   userid: string;
   role: string;
+  status?: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
