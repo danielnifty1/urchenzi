@@ -3,9 +3,8 @@ import { createMockOrder, getMockOrder, products, vendors } from "@/services/moc
 import { Order } from "@/types";
 
 const wait = (ms = 600) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const api = axios.create({
-  baseURL: "https://api.urchenziconnect.local",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.urchenziconnect.local",
   adapter: async (config) => {
     await wait();
 
