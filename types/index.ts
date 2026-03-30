@@ -76,7 +76,8 @@ export type ApiAuthUser = {
 
 export type AuthLoginResponse = {
   message: string;
-  access_token: string;
+  access_token?: string;
+  accessToken?: string;
   user: ApiAuthUser;
 };
 

@@ -12,13 +12,15 @@ import { useThemeStore } from "@/store/themeStore";
 export const Navbar = () => {
   const pathname = usePathname();
   const themeMode = useThemeStore((state) => state.mode);
+  const themeHydrated = useThemeStore((state) => state.hasHydrated);
   const isHome = pathname === "/";
-  const glovoNav = isHome && themeMode === "light";
+  const glovoNav = isHome && themeHydrated && themeMode === "light";
 
   const count = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.quantity, 0),
   );
   const user = useUserStore((state) => state.user);
+  const authResolved = useUserStore((state) => state.authResolved);
   const logout = useUserStore((state) => state.logout);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -63,12 +65,14 @@ export const Navbar = () => {
                 🛒
                 {cartBadge}
               </Link>
-              {user ? (
+              {!authResolved ? (
+                <div className="h-10 w-20 animate-pulse rounded-full bg-white/60" />
+              ) : user ? (
                 <div className="group relative hidden sm:block">
                   <button className="rounded-full bg-[#00A082] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#008f72] md:px-4">
                     👤 {user.name.split(" ")[0]}
                   </button>
-                  <div className="invisible absolute right-0 mt-2 w-48 rounded-lg border border-border bg-surface opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
+                  <div className="invisible absolute right-0 top-full z-50 w-48 rounded-lg border border-border bg-surface opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
                     <Link href="/profile" className="block px-4 py-3 text-sm hover:bg-background">
                       👤 Profile
                     </Link>
@@ -76,7 +80,7 @@ export const Navbar = () => {
                       📋 Order History
                     </Link>
                     <button
-                      onClick={logout}
+                      onClick={() => void logout()}
                       className="w-full px-4 py-3 text-left text-sm text-error hover:bg-background"
                     >
                       🚪 Logout
@@ -164,12 +168,14 @@ export const Navbar = () => {
               🛒
               {cartBadge}
             </Link>
-            {user ? (
+              {!authResolved ? (
+                <div className="hidden h-10 w-20 animate-pulse rounded-full bg-background sm:block" />
+              ) : user ? (
               <div className="group relative hidden sm:block">
                 <button className="rounded-full border-2 border-brand px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 md:px-4">
                   👤 {user.name.split(" ")[0]}
                 </button>
-                <div className="invisible absolute right-0 mt-2 w-48 rounded-lg border border-border bg-surface opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
+                <div className="invisible absolute right-0 top-full z-50 w-48 rounded-lg border border-border bg-surface opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
                   <Link href="/profile" className="block px-4 py-3 text-sm hover:bg-background">
                     👤 Profile
                   </Link>
@@ -177,7 +183,7 @@ export const Navbar = () => {
                     📋 Order History
                   </Link>
                   <button
-                    onClick={logout}
+                    onClick={() => void logout()}
                     className="w-full px-4 py-3 text-left text-sm text-error hover:bg-background"
                   >
                     🚪 Logout

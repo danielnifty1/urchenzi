@@ -7,19 +7,27 @@ type ThemeMode = "light" | "dark";
 
 type ThemeStore = {
   mode: ThemeMode;
+  hasHydrated: boolean;
   setMode: (mode: ThemeMode) => void;
   toggleMode: () => void;
+  setHasHydrated: (value: boolean) => void;
 };
 
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
       mode: "light",
+      hasHydrated: false,
       setMode: (mode) => set({ mode }),
       toggleMode: () => set({ mode: get().mode === "light" ? "dark" : "light" }),
+      setHasHydrated: (value) => set({ hasHydrated: value }),
     }),
     {
       name: "urchenzi-theme",
+      partialize: (state) => ({ mode: state.mode }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );

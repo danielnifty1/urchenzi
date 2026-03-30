@@ -69,7 +69,7 @@ export default function LoginPage() {
           : await registerWithPassword({
               email: email.trim(),
               password,
-              role: "customer",
+              // role: "customer",
             });
       login(session);
       toast.success(mode === "signin" ? "Welcome back." : "Account created.");

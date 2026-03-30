@@ -11,6 +11,7 @@ export const http = axios.create({
   baseURL: apiBaseUrl(),
   headers: { "Content-Type": "application/json" },
   timeout: 30_000,
+  withCredentials: true,
 });
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
