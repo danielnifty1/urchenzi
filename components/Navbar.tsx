@@ -34,7 +34,7 @@ export const Navbar = () => {
 
   if (glovoNav) {
     return (
-      <header className="sticky top-0 z-40 border-b border-black/5 bg-[#FFC244] shadow-sm">
+      <header className="sticky top-0 z-40 border-b border-black/5 bg-[#FFC244]/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
         <nav className="mx-auto max-w-6xl px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <Link
@@ -58,7 +58,7 @@ export const Navbar = () => {
               <ThemeToggle variant="glovo" />
               <Link
                 href="/cart"
-                className="relative rounded-full bg-white/95 px-3 py-2 text-sm font-semibold text-[#1a1a1a] shadow-md transition hover:bg-white md:px-4"
+                className="relative rounded-full bg-white/95 px-3 py-2 text-sm font-semibold text-[#1a1a1a] shadow-md ring-1 ring-black/5 transition hover:bg-white md:px-4"
               >
                 🛒
                 {cartBadge}
@@ -125,7 +125,7 @@ export const Navbar = () => {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm">
       <nav className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="flex flex-shrink-0 items-center gap-2">
@@ -159,7 +159,7 @@ export const Navbar = () => {
             <ThemeToggle variant="default" />
             <Link
               href="/cart"
-              className="relative rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark md:px-4"
+              className="relative rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-brand-dark md:px-4"
             >
               🛒
               {cartBadge}

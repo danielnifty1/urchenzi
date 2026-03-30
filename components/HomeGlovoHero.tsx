@@ -37,7 +37,9 @@ export const HomeGlovoHero = ({ search, onSearchChange }: HomeGlovoHeroProps) =>
   };
 
   return (
-    <section className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 bg-[#FFC244] px-4 pb-14 pt-8 dark:bg-gradient-to-b dark:from-surface dark:to-background md:pb-16 md:pt-10">
+    <section className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 overflow-hidden bg-[#FFC244] px-4 pb-14 pt-8 dark:bg-gradient-to-b dark:from-surface dark:to-background md:pb-16 md:pt-10">
+      <div className="pointer-events-none absolute -left-16 top-8 h-40 w-40 rounded-full bg-white/30 blur-2xl" aria-hidden />
+      <div className="pointer-events-none absolute -right-12 bottom-8 h-44 w-44 rounded-full bg-[#00A082]/20 blur-2xl" aria-hidden />
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-balance text-3xl font-bold leading-tight text-[#10131a] dark:text-foreground md:text-4xl lg:text-5xl">
           Enter your address to know{" "}
@@ -54,7 +56,7 @@ export const HomeGlovoHero = ({ search, onSearchChange }: HomeGlovoHeroProps) =>
         </p>
 
         <div className="mx-auto mt-8 max-w-xl">
-          <div className="flex items-center gap-2 rounded-full bg-white py-2 pl-4 pr-2 shadow-lg dark:border dark:border-border dark:bg-surface">
+          <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white py-2 pl-4 pr-2 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:border dark:border-border dark:bg-surface">
             <span className="text-lg text-[#666] dark:text-muted" aria-hidden>
               📍
             </span>

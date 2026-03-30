@@ -33,7 +33,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<"rating" | "delivery" | "fee">("rating");
 
   const filtered = useMemo(() => {
-    let result = (vendors ?? []).filter(
+    const result = (vendors ?? []).filter(
       (vendor) =>
         (category === "all" || vendor.category === category) &&
         vendor.name.toLowerCase().includes(search.toLowerCase()),
@@ -58,9 +58,12 @@ export default function HomePage() {
     <div className="-mt-6 space-y-0 md:-mt-8">
       <HomeGlovoHero search={search} onSearchChange={setSearch} />
 
-      <section className="relative z-10 -mt-8 rounded-t-[2rem] bg-white px-4 pb-10 pt-8 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] dark:bg-surface md:-mt-10 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10">
+      <section className="relative z-10 -mt-8 rounded-t-[2rem] border-x border-t border-border/60 bg-white/95 px-4 pb-10 pt-8 shadow-[0_-8px_32px_rgba(0,0,0,0.07)] backdrop-blur-sm dark:bg-surface/90 md:-mt-10 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10">
         <div className="mx-auto max-w-6xl space-y-8">
           <div className="text-center">
+            <p className="mx-auto mb-3 inline-flex rounded-full border border-[#00A082]/20 bg-[#00A082]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#00866f] dark:border-brand/30 dark:bg-brand/15 dark:text-brand">
+              Discover in minutes
+            </p>
             <h2 className="text-2xl font-bold text-[#10131a] dark:text-foreground md:text-3xl">
               Top restaurants and more in UrchenziConnect
             </h2>
@@ -69,7 +72,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-2xl border border-border/70 bg-gradient-to-br from-white to-background p-4 shadow-sm dark:from-surface dark:to-background/20">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">Browse by category</h3>
             </div>
@@ -91,7 +94,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-background/50 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-background/30">
+          <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-gradient-to-r from-brand/5 via-accent/5 to-brand/5 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-background/30">
             <h3 className="text-xl font-bold text-foreground">Available now</h3>
             <div className="flex flex-wrap gap-2">
               {SORT_OPTIONS.map((option) => (
@@ -111,7 +114,10 @@ export default function HomePage() {
           </div>
 
           <div>
-            <h3 className="mb-6 text-xl font-bold text-foreground">Featured vendors</h3>
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <h3 className="text-xl font-bold text-foreground">Featured vendors</h3>
+              <p className="text-sm font-medium text-muted">{filtered.length} places found</p>
+            </div>
             {isLoading ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
