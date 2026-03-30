@@ -1,14 +1,30 @@
-import type { NextConfig } from "next";
+  import { loadEnvConfig } from "@next/env";
+  import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-    ],
-  },
-};
+  loadEnvConfig(process.cwd());
 
-export default nextConfig;
+  const nextConfig: NextConfig = {
+    async headers() {
+      return [
+        {
+          source: "/:path*",
+          headers: [
+            {
+              key: "Cross-Origin-Opener-Policy",
+              value: "same-origin-allow-popups",
+            },
+          ],
+        },
+      ];
+    },
+    images: {
+      remotePatterns: [
+        {
+          protocol: "https",
+          hostname: "images.unsplash.com",
+        },
+      ],
+    },
+  };
+
+  export default nextConfig;

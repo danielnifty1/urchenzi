@@ -1,21 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { subscribeAuth } from "@/lib/firebase/auth";
+import { getAccessToken } from "@/lib/auth/token";
 import { useUserStore } from "@/store/userStore";
 
+/** Drops persisted user if there is no in-memory access token (e.g. after full page reload). */
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
-    if (!isFirebaseConfigured()) return;
-    const unsubscribe = subscribeAuth((session) => {
-      if (session) {
-        useUserStore.getState().login(session);
-      } else {
-        useUserStore.setState({ user: null });
-      }
-    });
-    return unsubscribe;
+    const { user } = useUserStore.getState();
+    if (user && !getAccessToken()) {
+      useUserStore.setState({ user: null });
+    }
   }, []);
 
   return <>{children}</>;

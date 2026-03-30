@@ -2,8 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { firebaseSignOut } from "@/lib/firebase/auth";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { setAccessToken } from "@/lib/auth/token";
 import { UserSession } from "@/types";
 
 type UserStore = {
@@ -18,9 +17,7 @@ export const useUserStore = create<UserStore>()(
       user: null,
       login: (payload) => set({ user: payload }),
       logout: () => {
-        if (isFirebaseConfigured()) {
-          void firebaseSignOut();
-        }
+        setAccessToken(null);
         set({ user: null });
       },
     }),
