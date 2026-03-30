@@ -81,6 +81,9 @@ export type AuthLoginResponse = {
   user: ApiAuthUser;
 };
 
+export type UserRole = "customer" | "vendor" | "rider";
+export type UserStatus = "pending" | "active" | "suspended";
+
 export type UserSession = {
   id: string;
   name: string;
@@ -88,7 +91,8 @@ export type UserSession = {
   photoURL?: string;
   /** External auth id when using API backend */
   userid?: string;
-  role?: string;
+  role?: UserRole;
+  status?: UserStatus;
 };
 
 export type Address = {

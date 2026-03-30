@@ -12,6 +12,7 @@ type UserStore = {
   login: (payload: UserSession) => void;
   logout: () => Promise<void>;
   setAuthResolved: (value: boolean) => void;
+  updateUserRole: (role: string, status: string) => void;
 };
 
 export const useUserStore = create<UserStore>()(
@@ -31,6 +32,10 @@ export const useUserStore = create<UserStore>()(
         }
       },
       setAuthResolved: (value) => set({ authResolved: value }),
+      updateUserRole: (role, status) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, role, status } : null,
+        })),
     }),
     {
       name: "urchenzi-user",
