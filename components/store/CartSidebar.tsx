@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useCartStore } from "@/store/cartStore";
 
 type CartSidebarProps = {
@@ -10,11 +11,16 @@ type CartSidebarProps = {
 };
 
 export function CartSidebar({ vendorId, storeClosed, storeName }: CartSidebarProps) {
-  const items = useCartStore((s) => s.items.filter((i) => i.vendorId === vendorId));
-  const subtotal = useCartStore((s) =>
-    s.items
-      .filter((i) => i.vendorId === vendorId)
-      .reduce((sum, i) => sum + i.price * i.quantity, 0),
+  // Select `items` only — `.filter()` in a selector returns a new array every run and
+  // breaks Zustand’s `Object.is` check, causing an infinite re-render loop.
+  const cartItems = useCartStore((s) => s.items);
+  const items = useMemo(
+    () => cartItems.filter((i) => i.vendorId === vendorId),
+    [cartItems, vendorId],
+  );
+  const subtotal = useMemo(
+    () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    [items],
   );
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
