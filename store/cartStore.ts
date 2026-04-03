@@ -1,8 +1,24 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { CartItem, Product } from "@/types";
+
+/** Avoid `window.localStorage` during SSR (throws in Node); real storage is used in the browser bundle. */
+const cartPersistStorage = createJSONStorage(() => {
+  if (typeof window === "undefined") {
+    const noop: Storage = {
+      length: 0,
+      clear: () => {},
+      getItem: () => null,
+      key: () => null,
+      removeItem: () => {},
+      setItem: () => {},
+    };
+    return noop;
+  }
+  return window.localStorage;
+});
 
 type CartStore = {
   items: CartItem[];
@@ -21,20 +37,26 @@ export const useCartStore = create<CartStore>()(
       vendorId: undefined,
       addItem: (product) =>
         set((state) => {
-          const existing = state.items.find((item) => item.productId === product.id);
+          const hasItems = state.items.length > 0;
+          const vendorMismatch =
+            hasItems && state.items[0]!.vendorId !== product.vendorId;
+          const base = vendorMismatch ? [] : state.items;
+
+          const existing = base.find((item) => item.productId === product.id);
           if (existing) {
             return {
-              items: state.items.map((item) =>
+              items: base.map((item) =>
                 item.productId === product.id
                   ? { ...item, quantity: item.quantity + 1 }
                   : item,
               ),
+              vendorId: product.vendorId,
             };
           }
 
           return {
             items: [
-              ...state.items,
+              ...base,
               {
                 id: `${product.id}-${Date.now()}`,
                 productId: product.id,
@@ -45,7 +67,7 @@ export const useCartStore = create<CartStore>()(
                 image: product.image,
               },
             ],
-            vendorId: state.vendorId ?? product.vendorId,
+            vendorId: product.vendorId,
           };
         }),
       removeItem: (id) =>
@@ -67,6 +89,6 @@ export const useCartStore = create<CartStore>()(
       subtotal: () =>
         get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     }),
-    { name: "urchenzi-cart" },
+    { name: "urchenzi-cart", storage: cartPersistStorage },
   ),
 );

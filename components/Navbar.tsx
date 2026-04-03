@@ -11,6 +11,9 @@ import { useThemeStore } from "@/store/themeStore";
 
 export const Navbar = () => {
   const pathname = usePathname();
+  if (pathname.startsWith("/store") || pathname.startsWith("/vendor/dashboard")) {
+    return null;
+  }
   const themeMode = useThemeStore((state) => state.mode);
   const themeHydrated = useThemeStore((state) => state.hasHydrated);
   const isHome = pathname === "/";
@@ -79,6 +82,14 @@ export const Navbar = () => {
                     <Link href="/orders/history" className="block px-4 py-3 text-sm hover:bg-background">
                       📋 Order History
                     </Link>
+                    {user.role === "vendor" && (
+                      <Link
+                        href="/vendor/dashboard"
+                        className="block px-4 py-3 text-sm hover:bg-background"
+                      >
+                        🏪 Vendor dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={() => void logout()}
                       className="w-full px-4 py-3 text-left text-sm text-error hover:bg-background"
@@ -182,6 +193,14 @@ export const Navbar = () => {
                   <Link href="/orders/history" className="block px-4 py-3 text-sm hover:bg-background">
                     📋 Order History
                   </Link>
+                  {user.role === "vendor" && (
+                    <Link
+                      href="/vendor/dashboard"
+                      className="block px-4 py-3 text-sm hover:bg-background"
+                    >
+                      🏪 Vendor dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={() => void logout()}
                     className="w-full px-4 py-3 text-left text-sm text-error hover:bg-background"

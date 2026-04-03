@@ -4,7 +4,7 @@ import { getAccessToken } from "@/lib/auth/token";
 function apiBaseUrl(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (raw) return raw.replace(/\/$/, "");
-  return "http://localhost:3000/api/v1";
+  return "http://localhost:3010/api/v1";
 }
 
 export const http = axios.create({

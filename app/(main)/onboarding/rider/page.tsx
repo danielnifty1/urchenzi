@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
@@ -24,10 +24,13 @@ export default function RiderOnboardingPage() {
     availability: "fulltime",
   });
 
-  if (!user) {
-    router.push("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
+
+  if (!user) return null;
 
   const handleNext = () => {
     if (currentStep === 2 && (!formData.vehiclePlate.trim() || !formData.licenseNumber.trim())) {

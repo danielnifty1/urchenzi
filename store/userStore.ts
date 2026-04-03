@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { setAccessToken } from "@/lib/auth/token";
 import { logoutSession } from "@/services/authApi";
-import { UserSession } from "@/types";
+import type { UserRole, UserSession, UserStatus } from "@/types";
 
 type UserStore = {
   user: UserSession | null;
@@ -12,7 +12,7 @@ type UserStore = {
   login: (payload: UserSession) => void;
   logout: () => Promise<void>;
   setAuthResolved: (value: boolean) => void;
-  updateUserRole: (role: string, status: string) => void;
+  updateUserRole: (role: UserRole, status: UserStatus) => void;
 };
 
 export const useUserStore = create<UserStore>()(

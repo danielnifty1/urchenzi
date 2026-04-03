@@ -36,7 +36,7 @@ export async function registerWithPassword(params: {
 }
 
 export function googleAuthRedirectUrl(): string {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:3000/api/v1";
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:3010/api/v1";
   return `${base}/auth/google`;
 }
 
