@@ -1,9 +1,9 @@
-  import { loadEnvConfig } from "@next/env";
   import type { NextConfig } from "next";
 
-  loadEnvConfig(process.cwd());
-
   const nextConfig: NextConfig = {
+    turbopack: {
+      root: process.cwd(),
+    },
     async headers() {
       return [
         {
