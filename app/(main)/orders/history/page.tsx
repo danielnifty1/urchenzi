@@ -56,19 +56,19 @@ export default function OrderHistoryPage() {
   });
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-3xl bg-brand p-8 text-white">
-        <h1 className="text-4xl font-bold mb-2">Order History</h1>
-        <p className="text-white/80">View your past orders and reorder favorites</p>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="rounded-2xl sm:rounded-3xl bg-brand p-6 sm:p-8 text-white">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Order History</h1>
+        <p className="text-sm sm:text-base text-white/80">View your past orders and reorder favorites</p>
       </div>
 
-      <div className="rounded-2xl bg-surface p-6 border border-border">
-        <div className="flex gap-2 mb-6">
+      <div className="rounded-2xl bg-surface p-4 sm:p-6 border border-border">
+        <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
           {(["all", "delivered", "cancelled"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm capitalize transition ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm capitalize transition ${
                 filter === f
                   ? "bg-brand text-white"
                   : "bg-background text-foreground hover:bg-border"
@@ -82,37 +82,37 @@ export default function OrderHistoryPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
+          <div className="rounded-lg border-2 border-dashed border-border p-6 sm:p-8 text-center">
             <p className="text-4xl mb-2">📦</p>
-            <p className="font-semibold text-foreground">No orders yet</p>
-            <p className="text-sm text-muted mt-1">Start ordering from your favorite vendors</p>
+            <p className="font-semibold text-foreground text-sm sm:text-base">No orders yet</p>
+            <p className="text-xs sm:text-sm text-muted mt-1">Start ordering from your favorite vendors</p>
             <Link
               href="/"
-              className="mt-4 inline-block rounded-lg bg-brand px-6 py-2 font-semibold text-white hover:bg-brand-dark transition"
+              className="mt-4 inline-block rounded-lg bg-brand px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-brand-dark transition"
             >
               Browse Vendors
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {filtered.map((order) => (
               <Link
                 key={order.id}
                 href={`/order/${order.id}`}
-                className="flex items-center justify-between rounded-lg border border-border p-4 hover:border-brand hover:bg-background transition"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border p-3 sm:p-4 hover:border-brand hover:bg-background transition gap-2 sm:gap-0"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <div className="text-2xl">🏪</div>
                     <div className="min-w-0">
-                      <h3 className="font-bold text-foreground">{order.vendor}</h3>
-                      <p className="text-sm text-muted">{order.items} items • {order.date}</p>
+                      <h3 className="font-bold text-foreground text-sm sm:text-base line-clamp-1">{order.vendor}</h3>
+                      <p className="text-xs sm:text-sm text-muted">{order.items} items • {order.date}</p>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-foreground">${order.total.toFixed(2)}</p>
-                  <p className={`text-sm font-semibold ${
+                <div className="text-right sm:whitespace-nowrap">
+                  <p className="font-bold text-foreground text-sm sm:text-base">${order.total.toFixed(2)}</p>
+                  <p className={`text-xs sm:text-sm font-semibold ${
                     order.status === "Delivered" ? "text-success" : "text-error"
                   }`}>
                     {order.status === "Delivered" ? "✓ Delivered" : "✗ Cancelled"}
@@ -124,9 +124,9 @@ export default function OrderHistoryPage() {
         )}
       </div>
 
-      <div className="rounded-2xl bg-surface p-8 border border-border">
-        <h2 className="text-2xl font-bold text-foreground mb-4">Spending Summary</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <div className="rounded-2xl bg-surface p-4 sm:p-8 border border-border">
+        <h2 className="text-lg sm:text-2xl font-bold text-foreground mb-4">Spending Summary</h2>
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
           {[
             { label: "Total Spent", value: `$${filtered.reduce((sum, o) => sum + o.total, 0).toFixed(2)}` },
             { label: "Orders", value: filtered.length.toString() },
@@ -134,10 +134,10 @@ export default function OrderHistoryPage() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="rounded-lg bg-background p-4 text-center border border-border"
+              className="rounded-lg bg-background p-3 sm:p-4 text-center border border-border"
             >
-              <p className="text-sm text-muted font-semibold uppercase mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-brand">{stat.value}</p>
+              <p className="text-xs sm:text-sm text-muted font-semibold uppercase mb-1">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-bold text-brand">{stat.value}</p>
             </div>
           ))}
         </div>

@@ -39,10 +39,10 @@ export default function VendorGlobalDashboardPage() {
 
   if (storesQ.isLoading) {
     return (
-      <div className="min-h-screen bg-[#0f1419] px-4 md:px-8">
-        <div className="mx-auto max-w-6xl space-y-8 py-8">
+      <div className="min-h-screen bg-[#0f1419] px-3 sm:px-4 md:px-8">
+        <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 py-6 sm:py-8">
           <StatsCardsSkeleton />
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <ChartSkeleton />
             <ChartSkeleton />
           </div>
@@ -53,9 +53,9 @@ export default function VendorGlobalDashboardPage() {
 
   if (storesQ.error) {
     return (
-      <div className="min-h-screen bg-[#0f1419] px-4 md:px-8">
-        <div className="mx-auto max-w-lg py-12">
-          <div className="rounded-xl border border-red-900/40 bg-red-950/30 p-4 text-sm text-red-200">
+      <div className="min-h-screen bg-[#0f1419] px-3 sm:px-4 md:px-8">
+        <div className="mx-auto max-w-lg py-8 sm:py-12">
+          <div className="rounded-xl border border-red-900/40 bg-red-950/30 p-3 sm:p-4 text-xs sm:text-sm text-red-200">
             {formatAdminError(storesQ.error)}
           </div>
         </div>
@@ -66,16 +66,16 @@ export default function VendorGlobalDashboardPage() {
   const g = globalQ.data;
 
   return (
-    <div className="min-h-screen bg-[#0f1419] px-4 md:px-8">
-      <div className="mx-auto max-w-6xl space-y-10 py-6 md:py-10">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-[#0f1419] px-3 sm:px-4 md:px-8">
+      <div className="mx-auto max-w-6xl space-y-6 sm:space-y-10 py-4 sm:py-6 md:py-10">
+      <header className="flex flex-col gap-4 sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">Dashboard</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white">Dashboard</h1>
+          <p className="mt-1 text-xs sm:text-sm text-zinc-400">
             Performance across {stores.length === 1 ? "your store" : "all your stores"}.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <label className="flex flex-col gap-1 text-xs text-zinc-500">
             <span className="uppercase tracking-wide">Store filter</span>
             <select
@@ -85,7 +85,7 @@ export default function VendorGlobalDashboardPage() {
                 setOverviewFilterStoreId(v === "" ? null : v);
                 toast.success(v ? "Filtered to one store" : "Showing all stores");
               }}
-              className="min-w-[200px] rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white"
+              className="w-full sm:min-w-[200px] rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white"
             >
               <option value="">All stores</option>
               {stores.map((s) => (

@@ -81,67 +81,67 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-3xl bg-brand p-8 text-white">
-        <h1 className="text-4xl font-bold mb-2">Order Summary</h1>
-        <p className="text-white/80">Review and complete your order</p>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="rounded-2xl sm:rounded-3xl bg-brand p-6 sm:p-8 text-white">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Order Summary</h1>
+        <p className="text-sm sm:text-base text-white/80">Review and complete your order</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-2xl bg-surface p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">📍 Delivery Address</h2>
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 border border-border">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">📍 Delivery Address</h2>
             <div className="space-y-3">
               {savedAddresses.map((addr) => (
                 <button
                   key={addr.id}
                   onClick={() => setAddress(addr.address)}
-                  className={`w-full text-left rounded-lg p-4 border-2 transition ${
+                  className={`w-full text-left rounded-lg p-3 sm:p-4 border-2 transition text-sm sm:text-base ${
                     address === addr.address
                       ? "border-brand bg-brand/5"
                       : "border-border hover:border-brand"
                   }`}
                 >
                   <div className="font-semibold text-foreground">{addr.label}</div>
-                  <div className="text-sm text-muted">{addr.address}</div>
+                  <div className="text-xs sm:text-sm text-muted">{addr.address}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">💳 Payment Method</h2>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 border border-border">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">💳 Payment Method</h2>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {(["Cash", "Card"] as const).map((method) => (
                 <button
                   type="button"
                   key={method}
                   onClick={() => setPaymentMethod(method)}
-                  className={`rounded-lg p-3 border-2 font-semibold transition ${
+                  className={`rounded-lg p-2.5 sm:p-3 border-2 font-semibold transition text-sm sm:text-base ${
                     paymentMethod === method
                       ? "border-brand bg-brand/5 text-brand"
                       : "border-border text-foreground hover:border-brand"
                   }`}
                 >
-                  {method === "Cash" ? "💵" : "💳"} {method}
+                  {method === "Cash" ? "💵" : "💳"} <span className="hidden sm:inline">{method}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">🎟️ Promo Code</h2>
-            <div className="flex gap-3">
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 border border-border">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">🎟️ Promo Code</h2>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <input
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 placeholder="Enter promo code"
-                className="flex-1 rounded-lg border border-border bg-background px-4 py-2 text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                className="flex-1 rounded-lg border border-border bg-background px-3 sm:px-4 py-2 text-sm sm:text-base text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
               <button
                 type="button"
                 onClick={() => setAppliedPromo(promoCode || null)}
-                className="rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark transition"
+                className="rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark transition text-sm sm:text-base whitespace-nowrap"
               >
                 Apply
               </button>
@@ -152,16 +152,16 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-surface p-6 border border-border h-fit sticky top-24">
-          <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
-          <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+        <div className="rounded-2xl bg-surface p-4 sm:p-6 border border-border h-fit lg:sticky lg:top-24">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">Order Items</h2>
+          <div className="space-y-2 sm:space-y-3 mb-4 max-h-64 sm:max-h-96 overflow-y-auto">
             {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm pb-2 border-b border-border">
-                <div>
-                  <p className="font-medium text-foreground">{item.name}</p>
+              <div key={item.id} className="flex justify-between text-xs sm:text-sm pb-2 border-b border-border">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-foreground truncate">{item.name}</p>
                   <p className="text-xs text-muted">x{item.quantity}</p>
                 </div>
-                <p className="font-semibold text-foreground">
+                <p className="font-semibold text-foreground ml-2 shrink-0">
                   {formatCurrency(item.price * item.quantity)}
                 </p>
               </div>
@@ -169,40 +169,42 @@ export default function CheckoutPage() {
           </div>
 
           <div className="space-y-2 border-t border-border pt-4">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted">Subtotal</span>
               <span className="font-medium">{formatCurrency(subtotal)}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted">Delivery fee</span>
               <span className="font-medium">{formatCurrency(deliveryFee)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between text-sm text-success">
+              <div className="flex justify-between text-xs sm:text-sm text-success">
                 <span className="font-medium">Discount ({appliedPromo})</span>
                 <span className="font-medium">-{formatCurrency(discount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
+            <div className="flex justify-between text-base sm:text-lg font-bold pt-2 border-t border-border">
               <span>Total</span>
               <span className="text-brand">{formatCurrency(total)}</span>
             </div>
           </div>
 
-          <button
-            onClick={onSubmit}
-            disabled={createOrder.isPending}
-            className="w-full mt-6 rounded-lg bg-brand px-4 py-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50 transition"
-          >
-            {createOrder.isPending ? "Processing..." : "Place Order"}
-          </button>
+          <div className="space-y-2 mt-6">
+            <button
+              onClick={onSubmit}
+              disabled={createOrder.isPending}
+              className="w-full rounded-lg bg-brand px-4 py-2.5 sm:py-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50 transition text-sm sm:text-base"
+            >
+              {createOrder.isPending ? "Processing..." : "Place Order"}
+            </button>
 
-          <Link
-            href="/cart"
-            className="block w-full mt-3 rounded-lg border-2 border-border px-4 py-3 text-center font-semibold text-foreground hover:border-brand hover:bg-brand/5 transition"
-          >
-            Back to Cart
-          </Link>
+            <Link
+              href="/cart"
+              className="block w-full rounded-lg border-2 border-border px-4 py-2.5 sm:py-3 text-center font-semibold text-foreground hover:border-brand hover:bg-brand/5 transition text-sm sm:text-base"
+            >
+              Back to Cart
+            </Link>
+          </div>
         </div>
       </div>
     </div>
