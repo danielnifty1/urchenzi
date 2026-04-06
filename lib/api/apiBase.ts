@@ -25,6 +25,7 @@ function isLocalDevApiUrl(value: string): boolean {
     return u.hostname === "localhost" || u.hostname === "127.0.0.1";
   } catch {
     return false;
+    
   }
 }
 
