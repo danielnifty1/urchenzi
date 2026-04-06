@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
+import { me, refreshSession } from "@/services/authApi";
+import { postCustomerOnboard } from "@/services/customerOnboardingApi";
 import { useUserStore } from "@/store/userStore";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -11,40 +14,91 @@ type Step = 1 | 2 | 3 | 4 | 5;
 export default function CustomerOnboardingPage() {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
-  const updateUserRole = useUserStore((state) => state.updateUserRole);
+  const login = useUserStore((state) => state.login);
 
   const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
     address: "",
     paymentMethod: "card",
     preferences: [] as string[],
   });
 
-  if (!user) {
-    router.push("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
 
-  const handleNext = () => {
-    if (currentStep === 1 && !formData.address.trim()) {
-      toast.error("Please enter your delivery address");
+  useEffect(() => {
+    if (!user) return;
+    setFormData((prev) => ({
+      ...prev,
+      firstName: prev.firstName || user.firstName?.trim() || "",
+      lastName: prev.lastName || user.lastName?.trim() || "",
+      phone: prev.phone || user.phone?.trim() || "",
+      address: prev.address || user.address?.trim() || "",
+    }));
+  }, [user]);
+
+  if (!user) return null;
+
+  const welcomeName = user.firstName?.trim() || user.name?.split(" ")[0] || "there";
+
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      setCurrentStep(2);
+      return;
+    }
+
+    if (currentStep === 2) {
+      if (
+        !formData.firstName.trim() ||
+        !formData.lastName.trim() ||
+        !formData.phone.trim() ||
+        !formData.address.trim()
+      ) {
+        toast.error("Please enter your first name, last name, phone number, and delivery address.");
+        return;
+      }
+      setSaving(true);
+      try {
+        await postCustomerOnboard({
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
+          role: user.role ?? "customer",
+        });
+        const session = await refreshSession().catch(() => me());
+        login(session);
+        setCurrentStep(3);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err));
+      } finally {
+        setSaving(false);
+      }
       return;
     }
 
     if (currentStep < 5) {
-      setCurrentStep((currentStep + 1) as Step);
+      setCurrentStep((s) => (s + 1) as Step);
     } else {
-      handleComplete();
+      await handleComplete();
     }
   };
 
   const handleComplete = async () => {
     try {
-      updateUserRole("customer", "active");
+      const session = await refreshSession().catch(() => me());
+      login(session);
       toast.success("Welcome to UrchenziConnect!");
       router.push("/");
     } catch (err) {
-      toast.error("Failed to complete setup");
+      toast.error(getApiErrorMessage(err));
     }
   };
 
@@ -55,9 +109,9 @@ export default function CustomerOnboardingPage() {
         <div className="space-y-6 text-center">
           <div className="text-6xl">👋</div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-foreground">Welcome, {user.name.split(" ")[0]}!</h2>
+            <h2 className="text-3xl font-bold text-foreground">Welcome, {welcomeName}!</h2>
             <p className="text-muted">
-              Let's set up your account to start ordering from your favorite vendors.
+              Let&apos;s set up your account to start ordering from your favorite vendors.
             </p>
           </div>
           <div className="space-y-3 text-left">
@@ -87,32 +141,61 @@ export default function CustomerOnboardingPage() {
       ),
     },
     {
-      title: "Delivery Address",
+      title: "Your details",
       render: (
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Delivery Address</h2>
-            <p className="text-muted">Where should we deliver your orders?</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Name, phone & address</h2>
+            <p className="text-muted">
+              Required registration details (saved via your account API). You can add more addresses
+              in your profile later.
+            </p>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
-                Your Address
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-2">First name</label>
               <input
                 type="text"
-                placeholder="Enter your delivery address"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
+                autoComplete="given-name"
+                maxLength={100}
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
               />
             </div>
-            <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
-              <p className="text-sm text-accent font-semibold">
-                You can save multiple addresses in your profile later
-              </p>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">Last name</label>
+              <input
+                type="text"
+                autoComplete="family-name"
+                maxLength={100}
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">Phone</label>
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                Delivery address
+              </label>
+              <input
+                type="text"
+                autoComplete="street-address"
+                placeholder="Street, city, area"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+              />
             </div>
           </div>
         </div>
@@ -154,8 +237,8 @@ export default function CustomerOnboardingPage() {
                     {method === "card"
                       ? "Secure online payments"
                       : method === "cash"
-                      ? "Pay when order arrives"
-                      : "Use wallet balance"}
+                        ? "Pay when order arrives"
+                        : "Use wallet balance"}
                   </p>
                 </div>
               </label>
@@ -213,7 +296,7 @@ export default function CustomerOnboardingPage() {
         <div className="space-y-6 text-center">
           <div className="text-6xl">🎉</div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-foreground">You're All Set!</h2>
+            <h2 className="text-3xl font-bold text-foreground">You&apos;re All Set!</h2>
             <p className="text-muted">
               Your account is ready to use. Start ordering from your favorite vendors now.
             </p>
@@ -221,15 +304,15 @@ export default function CustomerOnboardingPage() {
           <div className="rounded-lg border border-accent/30 bg-accent/5 p-6 space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-2xl">✓</span>
-              <p className="font-semibold text-foreground">Address saved</p>
+              <p className="font-semibold text-foreground">Profile saved</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-2xl">✓</span>
-              <p className="font-semibold text-foreground">Payment method configured</p>
+              <p className="font-semibold text-foreground">Payment preference chosen</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-2xl">✓</span>
-              <p className="font-semibold text-foreground">Account activated</p>
+              <p className="font-semibold text-foreground">Ready to browse</p>
             </div>
           </div>
         </div>
@@ -244,7 +327,14 @@ export default function CustomerOnboardingPage() {
       stepName={steps[currentStep - 1].title}
       onBack={currentStep > 1 ? () => setCurrentStep((currentStep - 1) as Step) : undefined}
       onNext={handleNext}
-      nextLabel={currentStep === 5 ? "Go to Home" : "Continue"}
+      nextDisabled={saving}
+      nextLabel={
+        currentStep === 5
+          ? "Go to Home"
+          : saving
+            ? "Saving…"
+            : "Continue"
+      }
     >
       {steps[currentStep - 1].render}
     </OnboardingLayout>
