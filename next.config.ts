@@ -1,6 +1,4 @@
-  import type { NextConfig } from "next";
-
-  const nextConfig: NextConfig = {
+  const nextConfig = {
     turbopack: {
       root: process.cwd(),
     },
@@ -27,4 +25,4 @@
     },
   };
 
-  export default nextConfig;
+  module.exports = nextConfig;
