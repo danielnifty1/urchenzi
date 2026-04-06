@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { getPostAuthRedirectPath } from "@/lib/auth/postAuthRedirect";
 import { loginWithPassword, registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
 
@@ -33,12 +35,20 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const login = useUserStore((state) => state.login);
+  const user = useUserStore((state) => state.user);
+  const authResolved = useUserStore((state) => state.authResolved);
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!authResolved || !user) return;
+    router.replace(getPostAuthRedirectPath(user));
+  }, [authResolved, user, router]);
 
   const onGoogle = () => {
     window.location.href = googleAuthRedirectUrl();
@@ -67,23 +77,28 @@ export default function LoginPage() {
           : await registerWithPassword({
               email: email.trim(),
               password,
-              // role: "customer",
             });
       login(session);
       toast.success(mode === "signin" ? "Welcome back." : "Account created.");
-      
-      // Check if user needs to complete onboarding
-      if (session.status === "pending") {
-        window.location.assign("/onboarding/select-role");
-      } else {
-        window.location.assign("/");
-      }
+      window.location.assign(getPostAuthRedirectPath(session));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
       setBusy(false);
     }
   };
+
+  if (!authResolved) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-muted">Loading…</div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-muted">Redirecting…</div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6">

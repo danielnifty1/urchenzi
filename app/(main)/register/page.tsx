@@ -1,22 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { getPostAuthRedirectPath } from "@/lib/auth/postAuthRedirect";
 import { registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
 
-function splitFullName(full: string): { firstName: string; lastName: string } {
-  const t = full.trim();
-  if (!t) return { firstName: "", lastName: "" };
-  const parts = t.split(/\s+/);
-  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
-  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
-}
-
 export default function RegisterPage() {
+  const router = useRouter();
   const login = useUserStore((state) => state.login);
+  const user = useUserStore((state) => state.user);
+  const authResolved = useUserStore((state) => state.authResolved);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,23 +37,32 @@ export default function RegisterPage() {
     }
     setBusy(true);
     try {
-      const { firstName, lastName } = splitFullName(name);
       const session = await registerWithPassword({
         email: email.trim(),
         password,
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
-        role: "customer",
       });
-      login({ ...session, name: name.trim() });
+      const merged = { ...session, name: name.trim() };
+      login(merged);
       toast.success("Account created.");
-      window.location.assign("/");
+      window.location.assign(getPostAuthRedirectPath(merged));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
       setBusy(false);
     }
   };
+
+  if (!authResolved) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-muted">Loading…</div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-muted">Redirecting…</div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6">

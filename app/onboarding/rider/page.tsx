@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
+import { isProfileComplete, profileCompletionPath } from "@/lib/auth/profileComplete";
 import { useUserStore } from "@/store/userStore";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -24,9 +25,27 @@ export default function RiderOnboardingPage() {
     availability: "fulltime",
   });
 
-  if (!user) {
-    router.push("/login");
-    return null;
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!isProfileComplete(user)) {
+      router.replace(profileCompletionPath("/onboarding/rider", "rider"));
+    }
+  }, [user, router]);
+
+  if (!user) return null;
+
+  if (!isProfileComplete(user)) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#00A082] border-t-transparent" />
+      </div>
+    );
   }
 
   const handleNext = () => {

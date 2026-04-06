@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { VendorCard } from "@/components/VendorCard";
 import { DownloadAppSection } from "@/components/DownloadAppSection";
@@ -7,6 +8,7 @@ import { LetsDoTogetherSection } from "@/components/LetsDoTogetherSection";
 import { WhyChooseUsSection } from "@/components/WhyChooseUsSection";
 import { HomeGlovoHero } from "@/components/HomeGlovoHero";
 import { useVendors } from "@/hooks/useMarketplace";
+import { DEMO_STORE_SLUG, DEMO_STORE_SLUG_CLOSED } from "@/data/storePageMock";
 import { VendorCategory } from "@/types";
 
 const CATEGORIES = [
@@ -55,10 +57,10 @@ export default function HomePage() {
   }, [vendors, category, search, sortBy]);
 
   return (
-    <div className="-mt-6 space-y-0 md:-mt-8">
+    <div className="space-y-0">
       <HomeGlovoHero search={search} onSearchChange={setSearch} />
 
-      <section className="relative z-10 -mt-8 rounded-t-[2rem] border-x border-t border-border/60 bg-white/95 px-4 pb-10 pt-8 shadow-[0_-8px_32px_rgba(0,0,0,0.07)] backdrop-blur-sm dark:bg-surface/90 md:-mt-10 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10">
+      <section className="relative z-[1] -mt-6 rounded-t-[2rem] border-x border-t border-border/60 bg-white/95 px-4 pb-10 pt-8 shadow-[0_-8px_32px_rgba(0,0,0,0.07)] backdrop-blur-sm dark:bg-surface/90 md:-mt-8 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10">
         <div className="mx-auto max-w-6xl space-y-8">
           <div className="text-center">
             <p className="mx-auto mb-3 inline-flex rounded-full border border-[#00A082]/20 bg-[#00A082]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#00866f] dark:border-brand/30 dark:bg-brand/15 dark:text-brand">
@@ -70,6 +72,40 @@ export default function HomePage() {
             <p className="mt-2 text-sm text-[#4a5568] dark:text-muted md:text-base">
               Browse by category and discover vendors near you.
             </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#00A082]/35 bg-gradient-to-br from-[#00A082]/10 via-white to-accent/15 p-5 shadow-[0_8px_28px_rgba(0,160,130,0.12)] dark:from-[#00A082]/15 dark:via-surface dark:to-background/30">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#00866f] dark:text-[#7dffc8]">
+                  Live demo storefront
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-foreground md:text-xl">
+                  The Mart — full menu, cart &amp; checkout flow
+                </h3>
+                <p className="mt-1 max-w-xl text-sm text-muted">
+                  Opens the Glovo-style store UI at{" "}
+                  <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
+                    /store/{DEMO_STORE_SLUG}
+                  </code>
+                  . Mock data only; cart persists in your browser.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:shrink-0 sm:items-end">
+                <Link
+                  href={`/store/${DEMO_STORE_SLUG}`}
+                  className="inline-flex items-center justify-center rounded-full bg-[#00A082] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[#00A082]/25 transition hover:bg-[#008f72]"
+                >
+                  Open demo store →
+                </Link>
+                <Link
+                  href={`/store/${DEMO_STORE_SLUG_CLOSED}`}
+                  className="text-center text-xs font-medium text-muted underline-offset-2 hover:text-foreground hover:underline sm:text-right"
+                >
+                  Also try: closed-store UI (Medplus mock)
+                </Link>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3 rounded-2xl border border-border/70 bg-gradient-to-br from-white to-background p-4 shadow-sm dark:from-surface dark:to-background/20">

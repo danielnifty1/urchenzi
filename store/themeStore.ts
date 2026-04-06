@@ -25,8 +25,11 @@ export const useThemeStore = create<ThemeStore>()(
     {
       name: "urchenzi-theme",
       partialize: (state) => ({ mode: state.mode }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.warn("[theme] persist rehydrate failed", error);
+          useThemeStore.getState().setHasHydrated(true);
+        }
       },
     },
   ),

@@ -1,5 +1,17 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_API_URL` | API **origin** only (no path). The client uses `<origin>/api/v1` for REST. If the value already ends with `/api/v1`, it is accepted as-is. |
+| `NEXT_PUBLIC_DEV_STORE_ID` | Optional UUID for `/dashboard` when `GET /me/stores` is not implemented yet. |
+| `NEXT_PUBLIC_RBAC_FALLBACK_ROLE` | Optional DX-only role when `GET /authz/me/permissions` returns 404/501. |
+
+Admin UI (`/admin`) uses the same API base and `POST /auth/login` with a platform **admin** account.
+
+**RBAC role assignments** (`/admin/rbac`): the frontend calls `GET/POST /admin/rbac/*` as documented in `docs/nest-admin-rbac-module.md`. Implement those routes in Nest (or proxy) so assign/revoke and pickers work. Optional `GET /admin/me` can return `isSuperAdmin` / `rbacAssignmentAllowed` to narrow access beyond `User.role === 'admin'`.
+
 ## Getting Started
 
 First, run the development server:
@@ -14,7 +26,7 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3010](http://localhost:3010) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

@@ -11,6 +11,9 @@ import { useThemeStore } from "@/store/themeStore";
 
 export const Navbar = () => {
   const pathname = usePathname();
+  if (pathname.startsWith("/store") || pathname.startsWith("/vendor/dashboard")) {
+    return null;
+  }
   const themeMode = useThemeStore((state) => state.mode);
   const themeHydrated = useThemeStore((state) => state.hasHydrated);
   const isHome = pathname === "/";
@@ -36,7 +39,7 @@ export const Navbar = () => {
 
   if (glovoNav) {
     return (
-      <header className="sticky top-0 z-40 border-b border-black/5 bg-[#FFC244]/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+      <header className="sticky top-0 z-[100] isolate border-b border-black/5 bg-[#FFC244]/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
         <nav className="mx-auto max-w-6xl px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <Link
@@ -69,7 +72,10 @@ export const Navbar = () => {
                 <div className="h-10 w-20 animate-pulse rounded-full bg-white/60" />
               ) : user ? (
                 <div className="group relative hidden sm:block">
-                  <button className="rounded-full bg-[#00A082] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#008f72] md:px-4">
+                  <button
+                    type="button"
+                    className="rounded-full bg-[#00A082] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#008f72] md:px-4"
+                  >
                     👤 {user.name.split(" ")[0]}
                   </button>
                   <div className="invisible absolute right-0 top-full z-50 w-48 rounded-lg border border-border bg-surface opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
@@ -79,6 +85,14 @@ export const Navbar = () => {
                     <Link href="/orders/history" className="block px-4 py-3 text-sm hover:bg-background">
                       📋 Order History
                     </Link>
+                    {user.role === "vendor" && (
+                      <Link
+                        href="/vendor/dashboard"
+                        className="block px-4 py-3 text-sm hover:bg-background"
+                      >
+                        🏪 Vendor dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={() => void logout()}
                       className="w-full px-4 py-3 text-left text-sm text-error hover:bg-background"
@@ -97,6 +111,7 @@ export const Navbar = () => {
                 </Link>
               )}
               <button
+                type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="rounded-lg p-2 hover:bg-black/5 md:hidden"
               >
@@ -129,7 +144,7 @@ export const Navbar = () => {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm">
+    <header className="sticky top-0 z-[100] isolate border-b border-border bg-surface/95 shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm">
       <nav className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="flex flex-shrink-0 items-center gap-2">
@@ -159,7 +174,7 @@ export const Navbar = () => {
             <LocationSelector />
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="relative z-[1] flex items-center gap-2 touch-manipulation md:gap-3">
             <ThemeToggle variant="default" />
             <Link
               href="/cart"
@@ -172,7 +187,10 @@ export const Navbar = () => {
                 <div className="hidden h-10 w-20 animate-pulse rounded-full bg-background sm:block" />
               ) : user ? (
               <div className="group relative hidden sm:block">
-                <button className="rounded-full border-2 border-brand px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 md:px-4">
+                <button
+                  type="button"
+                  className="rounded-full border-2 border-brand px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 md:px-4"
+                >
                   👤 {user.name.split(" ")[0]}
                 </button>
                 <div className="invisible absolute right-0 top-full z-50 w-48 rounded-lg border border-border bg-surface opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
@@ -182,6 +200,14 @@ export const Navbar = () => {
                   <Link href="/orders/history" className="block px-4 py-3 text-sm hover:bg-background">
                     📋 Order History
                   </Link>
+                  {user.role === "vendor" && (
+                    <Link
+                      href="/vendor/dashboard"
+                      className="block px-4 py-3 text-sm hover:bg-background"
+                    >
+                      🏪 Vendor dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={() => void logout()}
                     className="w-full px-4 py-3 text-left text-sm text-error hover:bg-background"
@@ -199,6 +225,7 @@ export const Navbar = () => {
               </Link>
             )}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="rounded-lg p-2 hover:bg-background md:hidden"
             >

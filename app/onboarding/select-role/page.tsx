@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { RoleSelectionCard } from "@/components/onboarding/RoleSelectionCard";
+import { getPostAuthRedirectPath } from "@/lib/auth/postAuthRedirect";
+import { isProfileComplete, profileCompletionPath } from "@/lib/auth/profileComplete";
 import { useUserStore } from "@/store/userStore";
 import { UserRole } from "@/types";
 
@@ -55,14 +57,34 @@ const ROLE_OPTIONS: {
 export default function SelectRolePage() {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
+  const authResolved = useUserStore((state) => state.authResolved);
   const updateUserRole = useUserStore((state) => state.updateUserRole);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  if (!user) {
-    router.push("/login");
-    return null;
+  useEffect(() => {
+    if (authResolved && !user) {
+      router.replace("/login");
+    }
+  }, [authResolved, user, router]);
+
+  useEffect(() => {
+    if (!authResolved || !user) return;
+    if (user.status !== "active" && user.status !== "suspended") return;
+    router.replace(getPostAuthRedirectPath(user));
+  }, [authResolved, user, router]);
+
+  if (!authResolved) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-brand to-brand-dark py-12 px-4">
+        <div className="mx-auto max-w-3xl animate-pulse rounded-xl bg-white/15 p-8 text-white">
+          Loading your account...
+        </div>
+      </div>
+    );
   }
+
+  if (!user) return null;
 
   const handleContinue = async () => {
     if (!selectedRole) {
@@ -72,6 +94,11 @@ export default function SelectRolePage() {
 
     setIsLoading(true);
     try {
+      if (selectedRole !== "customer" && !isProfileComplete(user)) {
+        updateUserRole(selectedRole, "pending");
+        router.push(profileCompletionPath(`/onboarding/${selectedRole}`, selectedRole));
+        return;
+      }
       updateUserRole(selectedRole, "pending");
       router.push(`/onboarding/${selectedRole}`);
     } catch (err) {
