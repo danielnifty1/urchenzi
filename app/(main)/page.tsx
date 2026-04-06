@@ -57,10 +57,10 @@ export default function HomePage() {
   }, [vendors, category, search, sortBy]);
 
   return (
-    <div className="-mt-6 space-y-0 md:-mt-8">
+    <div className="space-y-0">
       <HomeGlovoHero search={search} onSearchChange={setSearch} />
 
-      <section className="relative z-10 -mt-8 rounded-t-[2rem] border-x border-t border-border/60 bg-white/95 px-4 pb-10 pt-8 shadow-[0_-8px_32px_rgba(0,0,0,0.07)] backdrop-blur-sm dark:bg-surface/90 md:-mt-10 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10">
+      <section className="relative z-[1] -mt-6 rounded-t-[2rem] border-x border-t border-border/60 bg-white/95 px-4 pb-10 pt-8 shadow-[0_-8px_32px_rgba(0,0,0,0.07)] backdrop-blur-sm dark:bg-surface/90 md:-mt-8 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10">
         <div className="mx-auto max-w-6xl space-y-8">
           <div className="text-center">
             <p className="mx-auto mb-3 inline-flex rounded-full border border-[#00A082]/20 bg-[#00A082]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#00866f] dark:border-brand/30 dark:bg-brand/15 dark:text-brand">

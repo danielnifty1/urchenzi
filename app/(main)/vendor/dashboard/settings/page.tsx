@@ -1,6 +1,12 @@
 "use client";
 
-import { useVendorDashboardStore } from "@/store/vendorDashboardStore";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { vendorDashboardKeys } from "@/lib/vendorDashboard/queryKeys";
+import { getVendorSettings, patchVendorSettings } from "@/services/vendorDashboardApi";
+import type { VendorStoreSettings } from "@/types/vendorDashboard";
 import type { VendorCategory } from "@/types";
 
 const CATEGORIES: VendorCategory[] = [
@@ -16,8 +22,42 @@ const CATEGORIES: VendorCategory[] = [
 ];
 
 export default function VendorSettingsPage() {
-  const settings = useVendorDashboardStore((s) => s.settings);
-  const setSettings = useVendorDashboardStore((s) => s.setSettings);
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: vendorDashboardKeys.settings(),
+    queryFn: getVendorSettings,
+  });
+
+  const [draft, setDraft] = useState<VendorStoreSettings | null>(null);
+
+  useEffect(() => {
+    if (data) setDraft(data);
+  }, [data]);
+
+  const save = useMutation({
+    mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch),
+    onSuccess: () => {
+      toast.success("Settings saved");
+      void queryClient.invalidateQueries({ queryKey: vendorDashboardKeys.all });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  if (isLoading || !draft) {
+    return (
+      <div className="max-w-xl animate-pulse space-y-4 rounded-2xl border border-border bg-surface p-6">
+        <div className="h-8 w-40 bg-background" />
+        <div className="h-10 w-full bg-background" />
+        <div className="h-10 w-full bg-background" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <p className="text-sm text-rose-600 dark:text-rose-400">{getApiErrorMessage(error)}</p>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -30,7 +70,14 @@ export default function VendorSettingsPage() {
 
       <form
         className="max-w-xl space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-sm"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const slug = draft.storeSlug?.trim();
+          save.mutate({
+            ...draft,
+            storeSlug: slug || undefined,
+          });
+        }}
       >
         <div>
           <label className="mb-1 block text-sm font-medium text-foreground" htmlFor="storeName">
@@ -38,8 +85,8 @@ export default function VendorSettingsPage() {
           </label>
           <input
             id="storeName"
-            value={settings.storeName}
-            onChange={(e) => setSettings({ storeName: e.target.value })}
+            value={draft.storeName}
+            onChange={(e) => setDraft((d) => (d ? { ...d, storeName: e.target.value } : d))}
             className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
           />
         </div>
@@ -49,10 +96,25 @@ export default function VendorSettingsPage() {
           </label>
           <input
             id="tagline"
-            value={settings.tagline}
-            onChange={(e) => setSettings({ tagline: e.target.value })}
+            value={draft.tagline}
+            onChange={(e) => setDraft((d) => (d ? { ...d, tagline: e.target.value } : d))}
             className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
           />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-foreground" htmlFor="storeSlug">
+            Store slug (URL)
+          </label>
+          <input
+            id="storeSlug"
+            value={draft.storeSlug ?? ""}
+            onChange={(e) =>
+              setDraft((d) => (d ? { ...d, storeSlug: e.target.value || undefined } : d))
+            }
+            placeholder="e.g. my-kitchen"
+            className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
+          />
+          <p className="mt-1 text-xs text-muted">Used for /store/&lt;slug&gt; when wired to the catalog.</p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-foreground" htmlFor="category">
@@ -60,9 +122,11 @@ export default function VendorSettingsPage() {
           </label>
           <select
             id="category"
-            value={settings.category}
+            value={draft.category}
             onChange={(e) =>
-              setSettings({ category: e.target.value as VendorCategory })
+              setDraft((d) =>
+                d ? { ...d, category: e.target.value as VendorCategory } : d,
+              )
             }
             className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
           >
@@ -84,9 +148,11 @@ export default function VendorSettingsPage() {
               type="number"
               min={0}
               step={0.01}
-              value={settings.minOrder}
+              value={draft.minOrder}
               onChange={(e) =>
-                setSettings({ minOrder: parseFloat(e.target.value) || 0 })
+                setDraft((d) =>
+                  d ? { ...d, minOrder: parseFloat(e.target.value) || 0 } : d,
+                )
               }
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
             />
@@ -103,9 +169,11 @@ export default function VendorSettingsPage() {
               type="number"
               min={0}
               step={0.01}
-              value={settings.deliveryFee}
+              value={draft.deliveryFee}
               onChange={(e) =>
-                setSettings({ deliveryFee: parseFloat(e.target.value) || 0 })
+                setDraft((d) =>
+                  d ? { ...d, deliveryFee: parseFloat(e.target.value) || 0 } : d,
+                )
               }
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
             />
@@ -124,9 +192,11 @@ export default function VendorSettingsPage() {
               id="prepMin"
               type="number"
               min={1}
-              value={settings.prepTimeMin}
+              value={draft.prepTimeMin}
               onChange={(e) =>
-                setSettings({ prepTimeMin: parseInt(e.target.value, 10) || 1 })
+                setDraft((d) =>
+                  d ? { ...d, prepTimeMin: parseInt(e.target.value, 10) || 1 } : d,
+                )
               }
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
             />
@@ -142,9 +212,11 @@ export default function VendorSettingsPage() {
               id="prepMax"
               type="number"
               min={1}
-              value={settings.prepTimeMax}
+              value={draft.prepTimeMax}
               onChange={(e) =>
-                setSettings({ prepTimeMax: parseInt(e.target.value, 10) || 1 })
+                setDraft((d) =>
+                  d ? { ...d, prepTimeMax: parseInt(e.target.value, 10) || 1 } : d,
+                )
               }
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
             />
@@ -154,8 +226,8 @@ export default function VendorSettingsPage() {
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
           <input
             type="checkbox"
-            checked={settings.isOpen}
-            onChange={(e) => setSettings({ isOpen: e.target.checked })}
+            checked={draft.isOpen}
+            onChange={(e) => setDraft((d) => (d ? { ...d, isOpen: e.target.checked } : d))}
             className="h-4 w-4 rounded border-border text-[#00A082] focus:ring-[#00A082]"
           />
           <div>
@@ -165,6 +237,16 @@ export default function VendorSettingsPage() {
             </p>
           </div>
         </label>
+
+        <div className="flex justify-end border-t border-border pt-4">
+          <button
+            type="submit"
+            disabled={save.isPending}
+            className="rounded-xl bg-[#00A082] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#00A082]/20 transition hover:bg-[#008f72] disabled:opacity-50"
+          >
+            {save.isPending ? "Saving…" : "Save changes"}
+          </button>
+        </div>
       </form>
     </div>
   );

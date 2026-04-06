@@ -63,16 +63,22 @@ export type Order = {
   createdAt: string;
 };
 
-/** Backend user payload from /auth/login (and similar). */
+/**
+ * Backend user payload from /auth/* (public / toPublic). Identity is firstName + lastName only.
+ */
 export type ApiAuthUser = {
   id: string;
   userid: string;
   role: string;
   status?: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
   createdAt: string;
+  /** Nullable — varchar 100; set via registration / OAuth / customer onboarding. */
+  firstName: string | null;
+  /** Nullable — varchar 100. */
+  lastName: string | null;
+  phone?: string | null;
+  address?: string | null;
 };
 
 export type AuthLoginResponse = {
@@ -82,18 +88,25 @@ export type AuthLoginResponse = {
   user: ApiAuthUser;
 };
 
-export type UserRole = "customer" | "vendor" | "rider";
+export type UserRole = "customer" | "vendor" | "rider" | "admin";
 export type UserStatus = "pending" | "active" | "suspended";
 
 export type UserSession = {
   id: string;
+  /** Display: trimmed `firstName` + `lastName`, or email local part when names missing. */
   name: string;
+  /** From API — used with `lastName` for profile completeness (UsersService.isProfileComplete). */
+  firstName?: string;
+  lastName?: string;
   email: string;
   photoURL?: string;
   /** External auth id when using API backend */
   userid?: string;
   role?: UserRole;
   status?: UserStatus;
+  /** Delivery/contact — required for vendor/rider onboarding (ProfileCompleteGuard). */
+  phone?: string;
+  address?: string;
 };
 
 export type Address = {

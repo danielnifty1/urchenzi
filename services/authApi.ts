@@ -1,3 +1,4 @@
+import { getApiV1Base } from "@/lib/api/apiBase";
 import { setAccessToken } from "@/lib/auth/token";
 import { apiUserToSession } from "@/lib/auth/mapUser";
 import { http } from "@/lib/api/client";
@@ -20,24 +21,17 @@ export async function loginWithPassword(email: string, password: string): Promis
 export async function registerWithPassword(params: {
   email: string;
   password: string;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
 }): Promise<UserSession> {
   const { data } = await http.post<AuthLoginResponse>("/auth/register", {
     email: params.email.trim(),
     password: params.password,
-    firstName: params.firstName ?? null,
-    lastName: params.lastName ?? null,
-    role: params.role ?? "customer",
   });
   setAccessToken(readAccessToken(data));
   return apiUserToSession(data.user);
 }
 
 export function googleAuthRedirectUrl(): string {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:3010/api/v1";
-  return `${base}/auth/google`;
+  return `${getApiV1Base()}/auth/google`;
 }
 
 export async function refreshSession(): Promise<UserSession> {

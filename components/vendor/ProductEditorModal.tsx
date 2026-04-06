@@ -9,7 +9,9 @@ type Props = {
   onClose: () => void;
   mode: "add" | "edit";
   product: VendorDashboardProduct | null;
-  onSave: (data: Omit<VendorDashboardProduct, "id">) => void;
+  onSave: (data: Omit<VendorDashboardProduct, "id">) => void | Promise<void>;
+  /** Upload image to API; returns public URL for the product image field. */
+  onUploadImage?: (file: File) => Promise<string>;
 };
 
 const empty: Omit<VendorDashboardProduct, "id"> = {
@@ -27,8 +29,10 @@ export function ProductEditorModal({
   mode,
   product,
   onSave,
+  onUploadImage,
 }: Props) {
   const [form, setForm] = useState(empty);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -42,9 +46,9 @@ export function ProductEditorModal({
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(form);
+    await Promise.resolve(onSave(form));
     onClose();
   };
 
@@ -154,6 +158,32 @@ export function ProductEditorModal({
               onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-brand/30 focus:ring-2"
             />
+            {onUploadImage ? (
+              <div className="mt-2">
+                <label className="mb-1 block text-xs font-medium text-muted" htmlFor="p-img-file">
+                  Or upload a file
+                </label>
+                <input
+                  id="p-img-file"
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-[#00A082]/15 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#00A082]"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploading(true);
+                    try {
+                      const url = await onUploadImage(file);
+                      setForm((f) => ({ ...f, image: url }));
+                    } finally {
+                      setUploading(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
             <input

@@ -28,4 +28,12 @@ export type VendorStoreSettings = {
   prepTimeMin: number;
   prepTimeMax: number;
   isOpen: boolean;
+  /** Public storefront path segment; unique per vendor when set. */
+  storeSlug?: string | null;
+  /** Longer description for storefront / dashboard. */
+  description?: string;
+  /** Hero / logo image URL. */
+  storeImage?: string;
+  /** Free-text hours, e.g. "Mon–Fri 9–5". */
+  openingHours?: string;
 };
