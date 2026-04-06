@@ -4,6 +4,9 @@
   loadEnvConfig(process.cwd());
 
   const nextConfig: NextConfig = {
+    /** Lets HMR / dev assets load when you open the app via LAN IP (e.g. phone), not only localhost. */
+    allowedDevOrigins: ["172.20.10.4"],
+    /** Dev proxy is `app/api/v1/[[...path]]/route.ts` (more reliable than rewrites for LAN testing). */
     async headers() {
       return [
         {

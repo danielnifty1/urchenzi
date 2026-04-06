@@ -9,13 +9,13 @@ export function apiBaseUrl(): string {
 }
 
 export const http = axios.create({
-  baseURL: getApiV1Base(),
   headers: { "Content-Type": "application/json" },
   timeout: 30_000,
   withCredentials: true,
 });
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  config.baseURL = getApiV1Base();
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
