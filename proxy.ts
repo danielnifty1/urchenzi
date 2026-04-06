@@ -8,7 +8,7 @@ const UUID =
  * Legacy URLs: /dashboard/:uuid → /dashboard/stores/:uuid
  * (avoids clashing with /dashboard/stores as a static segment).
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] !== "dashboard" || parts.length < 2) return NextResponse.next();
