@@ -1,20 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
   adminVendorApprove,
   adminVendorBan,
   adminVendorDashboard,
+  adminVendorGetById,
   adminVendorReject,
   adminVendorReinstate,
   adminVendorSuspend,
 } from "@/services/adminVendorApi";
 import { formatAdminError } from "@/lib/admin/formatAdminError";
 import {
+  asRecord,
   getBool,
   getStr,
   humanizeKey,
@@ -72,22 +74,56 @@ function vendorRecordBadgeClass(status: string | null): string {
 }
 
 const REJECT_REASON_MAX = 2000;
+const UUID_RE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+
+function metricNum(metrics: Record<string, unknown>, ...keys: string[]): number {
+  for (const key of keys) {
+    const value = metrics[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() !== "") {
+      const n = Number(value);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return 0;
+}
 
 export default function AdminVendorOverviewPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const vendorId = String(params.vendorId ?? "");
+  const storeIdFromQuery = searchParams.get("storeId");
+  const validStoreIdFromQuery =
+    storeIdFromQuery && UUID_RE.test(storeIdFromQuery) ? storeIdFromQuery : null;
+  const [fallbackStoreId, setFallbackStoreId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["admin-vendor-dashboard", vendorId],
-    queryFn: () => adminVendorDashboard(vendorId),
+  useEffect(() => {
+    if (validStoreIdFromQuery) return;
+    if (typeof window === "undefined") return;
+    const fromStorage = window.localStorage.getItem("active_store_id");
+    setFallbackStoreId(fromStorage && UUID_RE.test(fromStorage) ? fromStorage : null);
+  }, [validStoreIdFromQuery]);
+
+  const storeId = validStoreIdFromQuery ?? fallbackStoreId ?? null;
+
+  const vendorQ = useQuery({
+    queryKey: ["admin-vendor", vendorId],
+    queryFn: () => adminVendorGetById(vendorId),
     enabled: Boolean(vendorId),
   });
 
-  const invalidateVendor = () =>
+  const dashboardQ = useQuery({
+    queryKey: ["admin-vendor-dashboard", vendorId, storeId],
+    queryFn: () => adminVendorDashboard(vendorId, storeId as string),
+    enabled: Boolean(vendorId && storeId),
+  });
+
+  const invalidateVendorDashboard = () =>
     void queryClient.invalidateQueries({ queryKey: ["admin-vendor-dashboard", vendorId] });
+  const invalidateVendor = () => void queryClient.invalidateQueries({ queryKey: ["admin-vendor", vendorId] });
 
   const invalidateDirectory = () =>
     void queryClient.invalidateQueries({ queryKey: ["admin-directory", "vendors"] });
@@ -97,6 +133,7 @@ export default function AdminVendorOverviewPage() {
     onSuccess: () => {
       toast.success("Vendor approved.");
       invalidateVendor();
+      invalidateVendorDashboard();
       invalidateDirectory();
     },
     onError: (e) => toast.error(formatAdminError(e)),
@@ -113,6 +150,7 @@ export default function AdminVendorOverviewPage() {
       setRejectOpen(false);
       setRejectReason("");
       invalidateVendor();
+      invalidateVendorDashboard();
       invalidateDirectory();
     },
     onError: (e) => toast.error(formatAdminError(e)),
@@ -123,6 +161,7 @@ export default function AdminVendorOverviewPage() {
     onSuccess: () => {
       toast.success("Linked store owner suspended.");
       invalidateVendor();
+      invalidateVendorDashboard();
     },
     onError: (e) => toast.error(formatAdminError(e)),
   });
@@ -132,6 +171,7 @@ export default function AdminVendorOverviewPage() {
     onSuccess: () => {
       toast.success("Linked store owner banned.");
       invalidateVendor();
+      invalidateVendorDashboard();
     },
     onError: (e) => toast.error(formatAdminError(e)),
   });
@@ -141,6 +181,7 @@ export default function AdminVendorOverviewPage() {
     onSuccess: () => {
       toast.success("Linked store owner reinstated (active).");
       invalidateVendor();
+      invalidateVendorDashboard();
     },
     onError: (e) => toast.error(formatAdminError(e)),
   });
@@ -148,7 +189,7 @@ export default function AdminVendorOverviewPage() {
   const modBusy = suspendMut.isPending || banMut.isPending || reinstateMut.isPending;
   const reviewBusy = approveMut.isPending || rejectMut.isPending;
 
-  if (isLoading) {
+  if (vendorQ.isLoading || (storeId && dashboardQ.isLoading)) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-36 rounded-2xl bg-zinc-900" />
@@ -161,27 +202,50 @@ export default function AdminVendorOverviewPage() {
     );
   }
 
-  if (error) {
+  if (vendorQ.error) {
     return (
       <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-4 text-red-200">
-        {formatAdminError(error)}
+        {formatAdminError(vendorQ.error)}
       </div>
     );
   }
-
-  const { settings, features, metrics, raw } = parseVendorDashboard(data);
+  const vendorRaw = asRecord(vendorQ.data);
+  const { settings, features, metrics, raw: dashboardRaw } = dashboardQ.data
+    ? parseVendorDashboard(dashboardQ.data)
+    : parseVendorDashboard({});
+  const raw = { ...vendorRaw, ...dashboardRaw };
   const ownerStatus = pickLinkedUserStatus(raw);
   const vendorRecordStatus = pickVendorRecordStatus(raw);
   const rejectionReason = pickVendorRejectionReason(raw);
-  const storeName = getStr(settings, "storeName", "store_name") || "Store";
-  const tagline = getStr(settings, "tagline", "tag_line");
-  const slug = getStr(settings, "storeSlug", "store_slug");
-  const category = getStr(settings, "category", "category");
-  const isOpen = getBool(settings, "isOpen", "is_open");
+  const storeName =
+    getStr(settings, "storeName", "store_name") ||
+    getStr(vendorRaw, "storeName", "store_name") ||
+    getStr(vendorRaw, "businessName", "business_name") ||
+    "Vendor";
+  const tagline = getStr(settings, "tagline", "tag_line") || getStr(vendorRaw, "tagline", "tag_line");
+  const slug =
+    getStr(settings, "storeSlug", "store_slug") ||
+    getStr(vendorRaw, "storeSlug", "store_slug") ||
+    getStr(vendorRaw, "slug", "slug");
+  const category = getStr(settings, "category", "category") || getStr(vendorRaw, "category", "category");
+  const hasStoreDashboard = Boolean(storeId && dashboardQ.data);
+  const isOpen = hasStoreDashboard ? getBool(settings, "isOpen", "is_open") : false;
 
   const metricEntries = Object.entries(metrics).filter(
     ([, v]) => typeof v === "number" && Number.isFinite(v),
   ) as [string, number][];
+  const kpiProducts = metricNum(metrics, "productCount", "productsCount", "totalProducts", "total_products");
+  const kpiOrders = metricNum(metrics, "ordersCount", "orderCount", "totalOrders", "total_orders");
+  const kpiSales = metricNum(
+    metrics,
+    "sales",
+    "salesTotal",
+    "totalSales",
+    "total_sales",
+    "revenue",
+    "totalRevenue",
+    "total_revenue",
+  );
 
   const featureEntries = Object.entries(features).filter(([, v]) => typeof v === "boolean") as [
     string,
@@ -192,8 +256,26 @@ export default function AdminVendorOverviewPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-white">Overview</h1>
-        <p className="mt-1 text-sm text-zinc-500">Store snapshot from the vendor dashboard API</p>
+        <p className="mt-1 text-sm text-zinc-500">
+          Vendor record overview. Store dashboard metrics are shown when store context is selected.
+        </p>
       </div>
+      {!storeId ? (
+        <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-amber-100">
+          <p className="font-semibold">No store selected</p>
+          <p className="mt-1 text-sm">
+            Approve/reject works from vendor details (`GET /admin/vendors/:vendorId`). Add a
+            <code className="mx-1 font-mono">storeId</code>
+            to load store dashboard, settings, and features.
+          </p>
+        </div>
+      ) : null}
+      {dashboardQ.error ? (
+        <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-amber-100">
+          <p className="font-semibold">Store dashboard unavailable for selected store</p>
+          <p className="mt-1 text-sm">{formatAdminError(dashboardQ.error)}</p>
+        </div>
+      ) : null}
 
       <div className="relative overflow-hidden rounded-2xl border border-zinc-800/90 bg-gradient-to-br from-emerald-950/40 via-zinc-900/80 to-zinc-950 p-6 sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -205,7 +287,7 @@ export default function AdminVendorOverviewPage() {
                   isOpen ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-700 text-zinc-400"
                 }`}
               >
-                {isOpen ? "Open" : "Closed"}
+                {hasStoreDashboard ? (isOpen ? "Open" : "Closed") : "No store context"}
               </span>
               {category ? (
                 <span className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-300">
@@ -230,13 +312,13 @@ export default function AdminVendorOverviewPage() {
           </div>
           <div className="flex flex-shrink-0 flex-wrap gap-2 sm:flex-col sm:items-stretch">
             <Link
-              href={`/admin/${vendorId}/settings`}
+              href={storeId ? `/admin/${vendorId}/settings?storeId=${storeId}` : `/admin/${vendorId}/settings`}
               className="rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 hover:bg-emerald-500"
             >
               View settings
             </Link>
             <Link
-              href={`/admin/${vendorId}/features`}
+              href={storeId ? `/admin/${vendorId}/features?storeId=${storeId}` : `/admin/${vendorId}/features`}
               className="rounded-xl border border-zinc-600 bg-zinc-900/80 px-4 py-2.5 text-center text-sm font-medium text-zinc-200 hover:bg-zinc-800"
             >
               Feature flags
@@ -250,6 +332,21 @@ export default function AdminVendorOverviewPage() {
           </div>
         </div>
       </div>
+
+      {hasStoreDashboard ? (
+        <section className="rounded-2xl border border-zinc-800/90 bg-zinc-900/40 p-6">
+          <h3 className="mb-4 text-sm font-semibold text-white">Store KPIs</h3>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard label="Products" value={kpiProducts} accentIndex={0} />
+            <StatCard label="Orders" value={kpiOrders} accentIndex={1} />
+            <StatCard
+              label="Sales"
+              value={new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(kpiSales)}
+              accentIndex={2}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-zinc-800/90 bg-zinc-900/40 p-6">
         <h3 className="text-sm font-semibold text-white">Vendor application</h3>

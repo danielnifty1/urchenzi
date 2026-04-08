@@ -9,7 +9,9 @@ import { getApiErrorMessage, isProfileIncompleteError } from "@/lib/auth/apiErro
 import { isProfileComplete, profileCompletionPath } from "@/lib/auth/profileComplete";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
 import { me, refreshSession } from "@/services/authApi";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
 import {
+  createVendorOnboard,
   deleteVendorOnboardingDocument,
   getVendorOnboarding,
   patchVendorOnboarding,
@@ -20,7 +22,23 @@ import {
 } from "@/services/vendorOnboardingApi";
 import { useUserStore } from "@/store/userStore";
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+const TOTAL_STEPS = 7 as const;
+
+function validateCreateVendorStep(form: {
+  businessName: string;
+  category: string;
+  address: string;
+}): string | null {
+  const bn = form.businessName.trim();
+  if (bn.length < 2 || bn.length > 200) return "Business name must be between 2 and 200 characters.";
+  const cat = form.category.trim();
+  if (cat.length < 2 || cat.length > 100) return "Category must be between 2 and 100 characters.";
+  const addr = form.address.trim();
+  if (addr.length < 5 || addr.length > 1000) return "Address must be between 5 and 1000 characters.";
+  return null;
+}
 
 const onboardingKey = ["vendor-onboarding"] as const;
 
@@ -63,6 +81,9 @@ export default function VendorOnboardingPage() {
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
+    businessName: "",
+    address: "",
+    logoFile: null as File | null,
     storeName: "",
     category: "",
     businessType: "new",
@@ -74,7 +95,9 @@ export default function VendorOnboardingPage() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [pendingDocType, setPendingDocType] = useState<VendorOnboardingDocumentType | null>(null);
+  const [uploadingDocType, setUploadingDocType] = useState<VendorOnboardingDocumentType | null>(null);
 
   const { data: onboarding, isLoading, error, refetch } = useQuery({
     queryKey: onboardingKey,
@@ -114,7 +137,10 @@ export default function VendorOnboardingPage() {
   useEffect(() => {
     if (!onboarding || hydrated) return;
     setFormData({
-      storeName: onboarding.storeName ?? "",
+      businessName: onboarding.businessName ?? onboarding.storeName ?? "",
+      address: onboarding.address ?? "",
+      logoFile: null,
+      storeName: onboarding.storeName ?? onboarding.businessName ?? "",
       category: onboarding.category ?? "",
       businessType: onboarding.businessType === "existing" ? "existing" : "new",
       hours: onboarding.hours ?? { open: "09:00", close: "21:00" },
@@ -131,6 +157,10 @@ export default function VendorOnboardingPage() {
       onboarding?.documents?.find((d) => d.type === type),
     [onboarding?.documents],
   );
+
+  /** Skip POST /vendors/onboard when server already returned registration fields from GET. */
+  const hasServerVendorRegistration =
+    Boolean(onboarding?.businessName?.trim()) && Boolean(onboarding?.address?.trim());
 
   const handleComplete = async () => {
     setSaving(true);
@@ -150,12 +180,52 @@ export default function VendorOnboardingPage() {
   };
 
   const goNext = async () => {
-    if (currentStep === 1 && (!formData.storeName.trim() || !formData.category)) {
-      toast.error("Please fill in all fields");
+    if (currentStep === 1) {
+      const err = validateCreateVendorStep(formData);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+      setSaving(true);
+      try {
+        if (!hasServerVendorRegistration) {
+          let logo: { data: string; fileName: string; mimeType: string } | undefined;
+          if (formData.logoFile) {
+            const img = await imagePayloadFromFile(formData.logoFile, "vendor logo");
+            logo = { data: img.data, fileName: img.fileName, mimeType: img.mimeType };
+          }
+          await createVendorOnboard({
+            businessName: formData.businessName,
+            category: formData.category,
+            address: formData.address,
+            logo,
+          });
+          toast.success("Vendor registered.");
+        }
+        const fresh = await queryClient.fetchQuery({
+          queryKey: onboardingKey,
+          queryFn: getVendorOnboarding,
+        });
+        queryClient.setQueryData(onboardingKey, fresh);
+        setFormData((prev) => ({
+          ...prev,
+          storeName: prev.storeName.trim() || prev.businessName.trim(),
+        }));
+        setCurrentStep(2);
+      } catch (e) {
+        toast.error(getApiErrorMessage(e));
+      } finally {
+        setSaving(false);
+      }
       return;
     }
 
-    if (currentStep === 6) {
+    if (currentStep === 2 && !formData.storeName.trim()) {
+      toast.error("Please enter a store display name");
+      return;
+    }
+
+    if (currentStep === 7) {
       await handleComplete();
       return;
     }
@@ -173,6 +243,7 @@ export default function VendorOnboardingPage() {
   };
 
   const triggerUpload = (type: VendorOnboardingDocumentType) => {
+    if (uploadingDocType) return;
     setPendingDocType(type);
     requestAnimationFrame(() => fileInputRef.current?.click());
   };
@@ -183,12 +254,15 @@ export default function VendorOnboardingPage() {
     e.target.value = "";
     setPendingDocType(null);
     if (!file || !type) return;
+    setUploadingDocType(type);
     try {
       await uploadVendorOnboardingDocument(type, file);
       toast.success("Document uploaded");
       await refetch();
     } catch (err) {
       toast.error(getApiErrorMessage(err));
+    } finally {
+      setUploadingDocType(null);
     }
   };
 
@@ -265,16 +339,113 @@ export default function VendorOnboardingPage() {
 
   const steps = [
     {
+      title: "Register vendor",
+      render: (
+        <div className="space-y-6">
+          <div>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Register your business</h2>
+            <p className="text-muted">
+              Create your vendor profile (POST <code className="rounded bg-black/10 px-1 text-xs">/vendors/onboard</code>
+              ).
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-foreground">Business name</label>
+              <input
+                type="text"
+                placeholder="Legal or trading name (2–200 characters)"
+                value={formData.businessName}
+                onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-foreground">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="">Select a category</option>
+                <option value="restaurant">Restaurant</option>
+                <option value="grocery">Grocery</option>
+                <option value="pharmacy">Pharmacy</option>
+                <option value="flowers">Flowers</option>
+                <option value="shop">Shop</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-foreground">Business address</label>
+              <textarea
+                placeholder="Street, city (5–1000 characters)"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                rows={4}
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-foreground">
+                Logo <span className="font-normal text-muted">(optional, image file)</span>
+              </label>
+              <input
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  setFormData((prev) => ({ ...prev, logoFile: f }));
+                  e.target.value = "";
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => logoFileInputRef.current?.click()}
+                  className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+                >
+                  Choose file
+                </button>
+                {formData.logoFile ? (
+                  <span className="text-sm text-muted">{formData.logoFile.name}</span>
+                ) : onboarding?.logoUrl ? (
+                  <span className="text-sm text-muted">Logo already saved for this vendor</span>
+                ) : null}
+                {formData.logoFile ? (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, logoFile: null }))}
+                    className="text-sm text-rose-600 hover:underline dark:text-rose-400"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Sent as <code className="rounded bg-black/10 px-1">logo.data</code>,{" "}
+                <code className="rounded bg-black/10 px-1">fileName</code>,{" "}
+                <code className="rounded bg-black/10 px-1">mimeType</code> (data URL / base64).
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
       title: "Store Information",
       render: (
         <div className="space-y-6">
           <div>
-            <h2 className="mb-2 text-2xl font-bold text-foreground">Tell Us About Your Store</h2>
-            <p className="text-muted">This helps customers find your products</p>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Tell us about your store</h2>
+            <p className="text-muted">
+              Display name and type for your storefront (saved to onboarding draft).
+            </p>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-foreground">Store Name</label>
+              <label className="mb-2 block text-sm font-semibold text-foreground">Store display name</label>
               <input
                 type="text"
                 placeholder="e.g., Fresh Market, Quick Bites"
@@ -529,6 +700,7 @@ export default function VendorOnboardingPage() {
                         <button
                           type="button"
                           onClick={() => removeDoc(existing.id)}
+                          disabled={uploadingDocType === type}
                           className="text-sm text-rose-600 hover:underline dark:text-rose-400"
                         >
                           Remove
@@ -538,9 +710,10 @@ export default function VendorOnboardingPage() {
                       <button
                         type="button"
                         onClick={() => triggerUpload(type)}
-                        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                        disabled={uploadingDocType !== null}
+                        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Upload
+                        {uploadingDocType === type ? "Uploading…" : "Upload"}
                       </button>
                     )}
                   </div>
@@ -567,6 +740,14 @@ export default function VendorOnboardingPage() {
             </p>
           </div>
           <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-6 text-left text-sm">
+            <p>
+              <span className="font-semibold text-foreground">Business:</span>{" "}
+              {formData.businessName || "—"}
+            </p>
+            <p>
+              <span className="font-semibold text-foreground">Address:</span>{" "}
+              {formData.address || "—"}
+            </p>
             <p>
               <span className="font-semibold text-foreground">Store:</span>{" "}
               {formData.storeName || "—"}
@@ -603,7 +784,7 @@ export default function VendorOnboardingPage() {
 
       <OnboardingLayout
         currentStep={currentStep}
-        totalSteps={6}
+        totalSteps={TOTAL_STEPS}
         stepName={steps[currentStep - 1].title}
         onBack={
           currentStep > 1 ? () => setCurrentStep((currentStep - 1) as Step) : undefined
@@ -611,13 +792,17 @@ export default function VendorOnboardingPage() {
         onNext={goNext}
         nextDisabled={saving}
         nextLabel={
-          currentStep === 6
+          currentStep === 7
             ? saving
               ? "Submitting…"
               : "Submit application"
             : saving
-              ? "Saving…"
-              : "Continue"
+              ? currentStep === 1
+                ? "Registering…"
+                : "Saving…"
+              : currentStep === 1 && !hasServerVendorRegistration
+                ? "Register & continue"
+                : "Continue"
         }
       >
         {steps[currentStep - 1].render}

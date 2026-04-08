@@ -119,52 +119,54 @@ export const Footer = () => {
           </div>
 
           {/* Links Sections */}
-          <div>
-            <h4 className="font-bold mb-4 text-white">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-brand transition"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <div className="flex flex-wrap gap-6 md:col-span-3 md:grid md:grid-cols-3 md:gap-6">
+            <div className="min-w-[140px] flex-1">
+              <h4 className="font-bold mb-4 text-white">Company</h4>
+              <ul className="space-y-3">
+                {footerLinks.company.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/70 hover:text-brand transition"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Services</h4>
-            <ul className="space-y-3">
-              {footerLinks.services.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-brand transition"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+            <div className="min-w-[140px] flex-1">
+              <h4 className="font-bold mb-4 text-white">Services</h4>
+              <ul className="space-y-3">
+                {footerLinks.services.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/70 hover:text-brand transition"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Support</h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-brand transition"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <div className="min-w-[140px] flex-1">
+              <h4 className="font-bold mb-4 text-white">Support</h4>
+              <ul className="space-y-3">
+                {footerLinks.support.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/70 hover:text-brand transition"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Newsletter */}
@@ -193,7 +195,7 @@ export const Footer = () => {
         <div className="border-t border-white/10 pt-8 space-y-6">
           <div className="flex flex-col md:flex-row gap-8 justify-between items-start md:items-center">
             {/* App Links */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
               <a
                 href="#"
                 className="px-4 py-2 bg-white/10 hover:bg-brand/20 rounded-lg text-sm font-semibold transition"
@@ -215,7 +217,7 @@ export const Footer = () => {
             </div>
 
             {/* Legal Links */}
-            <div className="flex flex-wrap gap-4 text-xs text-white/70">
+            <div className="grid grid-cols-2 gap-3 text-xs text-white/70 sm:flex sm:flex-wrap sm:gap-4">
               {footerLinks.legal.map((link) => (
                 <a key={link.label} href={link.href} className="hover:text-brand transition">
                   {link.label}

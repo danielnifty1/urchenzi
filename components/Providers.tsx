@@ -25,7 +25,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
       <ThemeController />
       <FirebaseAnalytics />
       <AuthProvider>{children}</AuthProvider>
-      <Toaster position="top-right" containerStyle={{ zIndex: 110 }} />
+      <Toaster position="top-right" containerStyle={{ zIndex: 11000 }} />
     </QueryClientProvider>
   );
 };

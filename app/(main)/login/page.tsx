@@ -2,12 +2,13 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { getPostAuthRedirectPath } from "@/lib/auth/postAuthRedirect";
 import { loginWithPassword, registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
+import type { UserSession } from "@/types";
 
 type Mode = "signin" | "signup";
 
@@ -36,6 +37,7 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useUserStore((state) => state.login);
   const user = useUserStore((state) => state.user);
   const authResolved = useUserStore((state) => state.authResolved);
@@ -44,11 +46,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const returnUrl = searchParams.get("returnUrl");
+  const safeReturnPath =
+    returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : null;
+  const resolvePostAuthPath = (session: UserSession) => {
+    const rolePath = getPostAuthRedirectPath(session);
+    if (session.status === "active" && safeReturnPath) return safeReturnPath;
+    return rolePath;
+  };
 
   useEffect(() => {
     if (!authResolved || !user) return;
-    router.replace(getPostAuthRedirectPath(user));
-  }, [authResolved, user, router]);
+    router.replace(resolvePostAuthPath(user));
+  }, [authResolved, user, router, safeReturnPath]);
 
   const onGoogle = () => {
     window.location.href = googleAuthRedirectUrl();
@@ -80,7 +90,7 @@ export default function LoginPage() {
             });
       login(session);
       toast.success(mode === "signin" ? "Welcome back." : "Account created.");
-      window.location.assign(getPostAuthRedirectPath(session));
+      window.location.assign(resolvePostAuthPath(session));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -111,7 +121,9 @@ export default function LoginPage() {
             type="button"
             onClick={() => setMode("signin")}
             className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
-              mode === "signin" ? "bg-brand-strong text-white" : "text-muted hover:text-foreground"
+              mode === "signin"
+                ? "bg-[#1a3a52] text-white dark:bg-brand"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Sign in
@@ -120,7 +132,9 @@ export default function LoginPage() {
             type="button"
             onClick={() => setMode("signup")}
             className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
-              mode === "signup" ? "bg-brand-strong text-white" : "text-muted hover:text-foreground"
+              mode === "signup"
+                ? "bg-[#1a3a52] text-white dark:bg-brand"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Sign up
@@ -181,7 +195,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-xl bg-brand-strong py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
+            className="w-full rounded-xl bg-[#1a3a52] py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50 dark:bg-brand"
           >
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>

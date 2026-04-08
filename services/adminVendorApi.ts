@@ -8,23 +8,41 @@ function unwrap<T>(data: unknown): T {
   return data as T;
 }
 
-export async function adminVendorDashboard(vendorId: string): Promise<unknown> {
-  const { data } = await http.get(`/admin/vendors/${vendorId}/dashboard`);
+export async function adminVendorDashboard(vendorId: string, storeId: string): Promise<unknown> {
+  const { data } = await http.get(`/admin/vendors/${vendorId}/dashboard`, {
+    headers: { "x-store-id": storeId },
+    params: { storeId },
+  });
   return unwrap(data);
 }
 
-export async function adminVendorMe(vendorId: string): Promise<unknown> {
-  const { data } = await http.get(`/admin/vendors/${vendorId}/me`);
+/** GET /admin/vendors/:vendorId — vendor profile without store context. */
+export async function adminVendorGetById(vendorId: string): Promise<unknown> {
+  const { data } = await http.get(`/admin/vendors/${vendorId}`);
   return unwrap(data);
 }
 
-export async function adminVendorGetSettings(vendorId: string): Promise<unknown> {
-  const { data } = await http.get(`/admin/vendors/${vendorId}/settings`);
+export async function adminVendorMe(vendorId: string, storeId: string): Promise<unknown> {
+  const { data } = await http.get(`/admin/vendors/${vendorId}/me`, {
+    headers: { "x-store-id": storeId },
+    params: { storeId },
+  });
   return unwrap(data);
 }
 
-export async function adminVendorGetFeatures(vendorId: string): Promise<unknown> {
-  const { data } = await http.get(`/admin/vendors/${vendorId}/features`);
+export async function adminVendorGetSettings(vendorId: string, storeId: string): Promise<unknown> {
+  const { data } = await http.get(`/admin/vendors/${vendorId}/settings`, {
+    headers: { "x-store-id": storeId },
+    params: { storeId },
+  });
+  return unwrap(data);
+}
+
+export async function adminVendorGetFeatures(vendorId: string, storeId: string): Promise<unknown> {
+  const { data } = await http.get(`/admin/vendors/${vendorId}/features`, {
+    headers: { "x-store-id": storeId },
+    params: { storeId },
+  });
   return unwrap(data);
 }
 

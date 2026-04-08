@@ -209,7 +209,10 @@ export async function listVendorOrdersScoped(
     try {
       const { data } = await http.get(path, {
         headers,
-        params: { limit: q.limit ?? 50 },
+        params: {
+          limit: q.limit ?? 50,
+          ...(storeId ? { storeId } : {}),
+        },
       });
       const body = unwrap<unknown>(data);
       return asOrderList(body);
@@ -242,6 +245,7 @@ export async function patchVendorOrderStatus(orderId: string, status: VendorOrde
 export async function fetchVendorStoreAnalytics(storeId: string): Promise<VendorStoreAnalytics> {
   try {
     const { data } = await http.get<Record<string, unknown>>("/vendor/analytics", {
+      params: { storeId },
       headers: { "x-store-id": storeId },
     });
     const body = unwrap<Record<string, unknown>>(data);

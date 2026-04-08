@@ -6,7 +6,7 @@
  * **Development + localhost in env:** the browser would call `http://localhost:3010` while the page
  * is `http://172.20.10.4:3001`. That is cross-origin; many backends only allow `localhost` as Origin,
  * so `/auth/refresh` fails and `/login` stays on "Loading…". We avoid that by using the **same origin**
- * as the page (`window.location.origin`) and proxying `/api/v1/*` to the backend (see `next.config.ts`).
+ * as the page (`window.location.origin`) and proxying `/api/v1/*` to the backend (see `app/api/v1/[[...path]]/route.ts`).
  *
  * **Server-side** (RSC, no `window`): requests go to `http://127.0.0.1:<port>` so they hit the backend
  * directly without relying on the dev hostname.
@@ -33,7 +33,7 @@ export function getApiV1Base(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
   const isDev = process.env.NODE_ENV === "development";
 
-  // Dev: same-origin /api/v1 → Next rewrite → backend (no CORS; works on LAN IP and localhost).
+  // Dev: same-origin /api/v1 → Next route proxy → backend (no CORS; works on LAN IP and localhost).
   if (isDev && (!fromEnv || isLocalDevApiUrl(fromEnv))) {
     if (typeof window !== "undefined") {
       return `${window.location.origin}/api/v1`;

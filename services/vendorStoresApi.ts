@@ -21,12 +21,24 @@ function normalizeEntity(raw: unknown): VendorStoreEntity | null {
   const id = r.id;
   if (id == null || String(id).trim() === "") return null;
   const vendorId = r.vendorId ?? r.vendor_id;
+  const imageRaw = r.image;
+  let image: string | null = null;
+  if (typeof imageRaw === "string") {
+    image = imageRaw;
+  } else if (imageRaw && typeof imageRaw === "object") {
+    const img = imageRaw as Record<string, unknown>;
+    image =
+      (typeof img.url === "string" && img.url) ||
+      (typeof img.path === "string" && img.path) ||
+      (typeof img.data === "string" && img.data) ||
+      null;
+  }
   return {
     id: String(id),
     vendorId: vendorId != null ? String(vendorId) : "",
     name: String(r.name ?? "Store"),
     address: String(r.address ?? ""),
-    image: r.image != null ? String(r.image) : null,
+    image,
     status: normalizeApiStatus(r.status),
     slug: r.slug != null && String(r.slug) !== "" ? String(r.slug) : null,
     createdAt: r.createdAt != null ? String(r.createdAt) : r.created_at != null ? String(r.created_at) : undefined,

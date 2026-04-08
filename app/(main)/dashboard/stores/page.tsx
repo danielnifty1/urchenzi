@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { StoreCard } from "@/components/dashboard/StoreCard";
 import { StoreGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { formatAdminError } from "@/lib/admin/formatAdminError";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { fetchMyAccessibleStores } from "@/services/storeDirectoryApi";
 import { createStore } from "@/services/vendorStoresApi";
+import type { StoreImageInput, VendorApiStoreStatus } from "@/types/vendorStore";
 
 export default function DashboardStoresListPage() {
   const router = useRouter();
@@ -18,6 +20,19 @@ export default function DashboardStoresListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newAddress, setNewAddress] = useState("");
+  const [newSlug, setNewSlug] = useState("");
+  const [newStatus, setNewStatus] = useState<VendorApiStoreStatus>("active");
+  const [imageDescription, setImageDescription] = useState("store logo");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [createOpen]);
 
   const q = useQuery({
     queryKey: ["dashboard-accessible-stores"],
@@ -25,16 +40,28 @@ export default function DashboardStoresListPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: () =>
-      createStore({
+    mutationFn: async () => {
+      let image: StoreImageInput | undefined;
+      if (imageFile) {
+        image = await imagePayloadFromFile(imageFile, imageDescription.trim() || "store logo");
+      }
+      return createStore({
         name: newName.trim(),
         address: newAddress.trim(),
-      }),
+        status: newStatus,
+        slug: newSlug.trim() || undefined,
+        image,
+      });
+    },
     onSuccess: async (store) => {
       toast.success("Store created");
       setCreateOpen(false);
       setNewName("");
       setNewAddress("");
+      setNewSlug("");
+      setNewStatus("active");
+      setImageDescription("store logo");
+      setImageFile(null);
       await queryClient.invalidateQueries({ queryKey: ["dashboard-accessible-stores"] });
       router.push(`/dashboard/stores/${store.id}`);
     },
@@ -75,11 +102,13 @@ export default function DashboardStoresListPage() {
         </header>
 
         {createOpen ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-[1px] p-4">
+            <div className="mx-auto mt-4 w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-xl md:mt-10">
               <h2 className="text-lg font-semibold text-white">Create store</h2>
-              <p className="mt-1 text-sm text-zinc-500">POST /stores — name and address are required.</p>
-              <div className="mt-4 space-y-3">
+              <p className="mt-1 text-sm text-zinc-500">
+                POST /stores — name, address, status, slug, optional image payload.
+              </p>
+              <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-zinc-400" htmlFor="ns-name">
                     Name
@@ -105,8 +134,61 @@ export default function DashboardStoresListPage() {
                     placeholder="Street, city, …"
                   />
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-400" htmlFor="ns-slug">
+                    Slug (optional)
+                  </label>
+                  <input
+                    id="ns-slug"
+                    value={newSlug}
+                    onChange={(e) => setNewSlug(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
+                    placeholder="lekki-branch"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-400" htmlFor="ns-status">
+                    Status
+                  </label>
+                  <select
+                    id="ns-status"
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value as VendorApiStoreStatus)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="active">active</option>
+                    <option value="draft">draft</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-400" htmlFor="ns-image">
+                    Store image (optional)
+                  </label>
+                  <input
+                    id="ns-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-200"
+                  />
+                </div>
+                {imageFile ? (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-zinc-400" htmlFor="ns-image-desc">
+                      Image description
+                    </label>
+                    <input
+                      id="ns-image-desc"
+                      value={imageDescription}
+                      onChange={(e) => setImageDescription(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
+                      placeholder="store logo"
+                    />
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-6 flex justify-end gap-2">
+              <div className="mt-6 flex justify-end gap-2 border-t border-zinc-800 pt-4">
                 <button
                   type="button"
                   onClick={() => setCreateOpen(false)}

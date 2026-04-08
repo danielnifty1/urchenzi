@@ -22,7 +22,28 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
   const storeId = getActiveStoreId();
   if (storeId && !config.skipStoreContext) {
-    config.headers["x-store-id"] = storeId;
+    const existingHeader =
+      config.headers["x-store-id"] ??
+      config.headers["X-Store-Id"];
+    if (!existingHeader) {
+      config.headers["x-store-id"] = storeId;
+    }
+    // Many vendor endpoints validate StoreContextQueryDto (`?storeId=<uuid>`), not only the header.
+    const method = String(config.method ?? "get").toLowerCase();
+    if (method === "get" || method === "head" || method === "delete") {
+      if (config.params instanceof URLSearchParams) {
+        if (!config.params.has("storeId") && !config.params.has("store_id")) {
+          config.params.set("storeId", storeId);
+        }
+      } else {
+        const existing = (
+          config.params && typeof config.params === "object" ? config.params : {}
+        ) as Record<string, unknown>;
+        if (existing.storeId === undefined && existing.store_id === undefined) {
+          config.params = { ...existing, storeId };
+        }
+      }
+    }
   }
   return config;
 });
@@ -65,6 +86,11 @@ http.interceptors.response.use(
     if (status === 403 && typeof window !== "undefined") {
       const code = getApiErrorCode(error);
       if (code === "AUTH_REQUIRED") {
+        // If we already have an access token, avoid hard redirect loops
+        // (e.g. vendor dashboard missing context/permissions).
+        if (getAccessToken()) {
+          return Promise.reject(error);
+        }
         const path = `${window.location.pathname}${window.location.search}`;
         window.location.assign(`/login?returnUrl=${encodeURIComponent(path)}`);
         return new Promise(() => {});

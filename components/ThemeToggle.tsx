@@ -16,8 +16,8 @@ export const ThemeToggle = ({ variant = "default" }: ThemeToggleProps) => {
       onClick={toggleMode}
       className={
         variant === "glovo"
-          ? "inline-flex touch-manipulation items-center gap-2 rounded-full border border-black/10 bg-white/90 px-3 py-2 text-xs font-semibold text-[#1a1a1a] shadow-sm hover:bg-white dark:border-white/20 dark:bg-white/10 dark:text-white"
-          : "inline-flex touch-manipulation items-center gap-2 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:opacity-90"
+          ? "relative z-[1] inline-flex cursor-pointer touch-manipulation items-center gap-2 rounded-full border border-black/10 bg-white/90 px-3 py-2 text-xs font-semibold text-[#1a1a1a] shadow-sm [-webkit-tap-highlight-color:transparent] hover:bg-white dark:border-white/20 dark:bg-white/10 dark:text-white"
+          : "relative z-[1] inline-flex cursor-pointer touch-manipulation items-center gap-2 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground [-webkit-tap-highlight-color:transparent] hover:opacity-90"
       }
       aria-label="Toggle theme"
     >

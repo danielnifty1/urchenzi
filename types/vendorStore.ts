@@ -14,11 +14,18 @@ export type VendorStoreEntity = {
   updatedAt?: string;
 };
 
+export type StoreImageInput = {
+  data: string;
+  fileName: string;
+  mimeType: string;
+  description?: string;
+};
+
 export type CreateStoreBody = {
   name: string;
   address: string;
   status?: VendorApiStoreStatus;
-  image?: string;
+  image?: string | StoreImageInput;
   slug?: string;
 };
 

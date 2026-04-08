@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { VendorFormCard } from "@/components/admin/vendor/VendorFormCard";
 import { adminVendorGetFeatures } from "@/services/adminVendorApi";
 import { formatAdminError } from "@/lib/admin/formatAdminError";
 import { extractFeaturesBlob, humanizeKey, VENDOR_FEATURE_META } from "@/lib/admin/vendorWorkspace";
+
+const UUID_RE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 
 function buildFeatureState(raw: unknown): Record<string, boolean> {
   const blob = extractFeaturesBlob(raw);
@@ -30,19 +32,36 @@ function orderedFeatureKeys(flags: Record<string, boolean>): string[] {
 
 export default function AdminVendorFeaturesPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const vendorId = String(params.vendorId ?? "");
+  const storeIdFromQuery = searchParams.get("storeId");
+  const validStoreIdFromQuery =
+    storeIdFromQuery && UUID_RE.test(storeIdFromQuery) ? storeIdFromQuery : null;
+  const [fallbackStoreId, setFallbackStoreId] = useState<string | null>(null);
+  const storeId = validStoreIdFromQuery ?? fallbackStoreId ?? null;
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [flags, setFlags] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (validStoreIdFromQuery) return;
+    if (typeof window === "undefined") return;
+    const fromStorage = window.localStorage.getItem("active_store_id");
+    setFallbackStoreId(fromStorage && UUID_RE.test(fromStorage) ? fromStorage : null);
+  }, [validStoreIdFromQuery]);
+
+  useEffect(() => {
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
       setLoadError("");
       try {
-        const data = await adminVendorGetFeatures(vendorId);
+        const data = await adminVendorGetFeatures(vendorId, storeId);
         if (cancelled) return;
         setFlags(buildFeatureState(data));
       } catch (e) {
@@ -54,7 +73,7 @@ export default function AdminVendorFeaturesPage() {
     return () => {
       cancelled = true;
     };
-  }, [vendorId]);
+  }, [storeId, vendorId]);
 
   const keys = useMemo(() => orderedFeatureKeys(flags), [flags]);
 
@@ -72,6 +91,16 @@ export default function AdminVendorFeaturesPage() {
   }
   if (loadError) {
     return <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-4 text-red-200">{loadError}</div>;
+  }
+  if (!storeId) {
+    return (
+      <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-amber-100">
+        <p className="font-semibold">Store context required</p>
+        <p className="mt-1 text-sm">
+          Open this page as <code className="font-mono">/admin/{vendorId}/features?storeId=STORE_UUID</code>.
+        </p>
+      </div>
+    );
   }
 
   return (

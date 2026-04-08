@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { ProductCard } from "@/components/dashboard/ProductCard";
-import { ProductEditorModal } from "@/components/vendor/ProductEditorModal";
+import { ProductEditorModal, type ProductEditorSaveData } from "@/components/vendor/ProductEditorModal";
 import { useStoreDashboard } from "@/contexts/StoreDashboardContext";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
 import { getApiErrorMessage, isPermissionDeniedError } from "@/lib/auth/apiErrors";
 import { dashboardStoreKeys } from "@/lib/dashboard/queryKeys";
 import {
@@ -15,7 +16,7 @@ import {
   patchVendorProduct,
   uploadVendorMedia,
 } from "@/services/vendorDashboardApi";
-import type { VendorDashboardProduct } from "@/types/vendorDashboard";
+import type { PatchVendorProductPayload, VendorDashboardProduct } from "@/types/vendorDashboard";
 import { formatCurrency } from "@/utils/format";
 import clsx from "clsx";
 
@@ -59,13 +60,8 @@ export default function DashboardStoreProductsPage() {
   const products = listQuery.data?.pages.flatMap((p) => p.items) ?? [];
 
   const patchMut = useMutation({
-    mutationFn: ({
-      id,
-      patch,
-    }: {
-      id: string;
-      patch: Partial<Omit<VendorDashboardProduct, "id">>;
-    }) => patchVendorProduct(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: PatchVendorProductPayload }) =>
+      patchVendorProduct(id, patch),
     onSuccess: () => void invalidate(),
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -95,13 +91,39 @@ export default function DashboardStoreProductsPage() {
     setModalOpen(true);
   };
 
-  const handleSave = async (form: Omit<VendorDashboardProduct, "id">) => {
+  const handleSave = async (data: ProductEditorSaveData) => {
     try {
       if (modalMode === "edit" && editing) {
-        await patchVendorProduct(editing.id, form);
+        const patch: PatchVendorProductPayload = {
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          price: Math.round(data.price * 100) / 100,
+          category: data.category.trim() || undefined,
+          inStock: data.inStock,
+        };
+        if (data.imageFile) {
+          const { url } = await uploadVendorMedia(data.imageFile);
+          patch.image = url;
+        } else {
+          patch.image = data.imageUrl.trim() === "" ? null : data.imageUrl.trim();
+        }
+        await patchVendorProduct(editing.id, patch);
         toast.success("Product updated");
       } else {
-        await createVendorProduct({ ...form, storeId });
+        if (!data.imageFile) {
+          toast.error("Choose a product image");
+          throw new Error("Missing image");
+        }
+        const img = await imagePayloadFromFile(data.imageFile, "product");
+        await createVendorProduct({
+          storeId,
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          price: Math.round(data.price * 100) / 100,
+          category: data.category.trim() || undefined,
+          inStock: data.inStock,
+          image: { data: img.data, fileName: img.fileName, mimeType: img.mimeType },
+        });
         toast.success("Product added");
       }
       await invalidate();
@@ -400,10 +422,6 @@ export default function DashboardStoreProductsPage() {
           mode={modalMode}
           product={editing}
           onSave={handleSave}
-          onUploadImage={async (file) => {
-            const { url } = await uploadVendorMedia(file);
-            return url;
-          }}
         />
       ) : null}
     </div>

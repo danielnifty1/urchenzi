@@ -7,7 +7,7 @@ import { StatsCardsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { useStoreDashboard } from "@/contexts/StoreDashboardContext";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { dashboardStoreKeys } from "@/lib/dashboard/queryKeys";
-import { getVendorDashboard } from "@/services/vendorDashboardApi";
+import { getVendorDashboardScoped } from "@/services/vendorDashboardApi";
 import { listVendorOrdersScoped } from "@/services/vendorMultiStoreApi";
 import { formatCurrency } from "@/utils/format";
 
@@ -16,7 +16,7 @@ export default function StoreWorkspaceOverviewPage() {
 
   const dashQ = useQuery({
     queryKey: [...dashboardStoreKeys.store(storeId), "overview"],
-    queryFn: getVendorDashboard,
+    queryFn: () => getVendorDashboardScoped(storeId),
   });
 
   const ordersQ = useQuery({

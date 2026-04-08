@@ -25,7 +25,18 @@ export function formatAdminError(err: unknown): string {
     if (d?.message) {
       parts.push(Array.isArray(d.message) ? d.message.join(", ") : d.message);
     } else if (err.response?.status) {
-      parts.push(`HTTP ${err.response.status}`);
+      const status = err.response.status;
+      if ([500, 502, 503, 504].includes(status)) {
+        parts.push("Server temporarily unavailable. Please retry in a moment.");
+      } else {
+        parts.push(`HTTP ${status}`);
+      }
+    }
+    if (err.code === "ECONNABORTED") {
+      parts.push("Request timed out. Check connectivity and retry.");
+    }
+    if (err.code === "ERR_NETWORK") {
+      parts.push("Cannot reach the server. Verify backend/network and try again.");
     }
     if (d?.errors && typeof d.errors === "object") {
       for (const [k, v] of Object.entries(d.errors)) {

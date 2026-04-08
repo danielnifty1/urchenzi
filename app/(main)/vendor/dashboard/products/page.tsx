@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { ProductEditorModal } from "@/components/vendor/ProductEditorModal";
+import { ProductEditorModal, type ProductEditorSaveData } from "@/components/vendor/ProductEditorModal";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { getActiveStoreId } from "@/lib/store/activeStoreId";
 import { vendorDashboardKeys } from "@/lib/vendorDashboard/queryKeys";
@@ -14,7 +15,7 @@ import {
   patchVendorProduct,
   uploadVendorMedia,
 } from "@/services/vendorDashboardApi";
-import type { VendorDashboardProduct } from "@/types/vendorDashboard";
+import type { PatchVendorProductPayload, VendorDashboardProduct } from "@/types/vendorDashboard";
 import { formatCurrency } from "@/utils/format";
 
 export default function VendorProductsPage() {
@@ -56,13 +57,8 @@ export default function VendorProductsPage() {
   const products = data?.pages.flatMap((p) => p.items) ?? [];
 
   const patchMut = useMutation({
-    mutationFn: ({
-      id,
-      patch,
-    }: {
-      id: string;
-      patch: Partial<Omit<VendorDashboardProduct, "id">>;
-    }) => patchVendorProduct(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: PatchVendorProductPayload }) =>
+      patchVendorProduct(id, patch),
     onSuccess: () => {
       void invalidateVendor();
     },
@@ -94,10 +90,23 @@ export default function VendorProductsPage() {
     setModalOpen(true);
   };
 
-  const handleSave = async (form: Omit<VendorDashboardProduct, "id">) => {
+  const handleSave = async (data: ProductEditorSaveData) => {
     try {
       if (modalMode === "edit" && editing) {
-        await patchVendorProduct(editing.id, form);
+        const patch: PatchVendorProductPayload = {
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          price: Math.round(data.price * 100) / 100,
+          category: data.category.trim() || undefined,
+          inStock: data.inStock,
+        };
+        if (data.imageFile) {
+          const { url } = await uploadVendorMedia(data.imageFile);
+          patch.image = url;
+        } else {
+          patch.image = data.imageUrl.trim() === "" ? null : data.imageUrl.trim();
+        }
+        await patchVendorProduct(editing.id, patch);
         toast.success("Product updated");
       } else {
         const sid = getActiveStoreId();
@@ -105,7 +114,20 @@ export default function VendorProductsPage() {
           toast.error("Select a store in the multi-store dashboard (/dashboard) so products include storeId.");
           throw new Error("Missing store context");
         }
-        await createVendorProduct({ ...form, storeId: sid });
+        if (!data.imageFile) {
+          toast.error("Choose a product image");
+          throw new Error("Missing image");
+        }
+        const img = await imagePayloadFromFile(data.imageFile, "product");
+        await createVendorProduct({
+          storeId: sid,
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          price: Math.round(data.price * 100) / 100,
+          category: data.category.trim() || undefined,
+          inStock: data.inStock,
+          image: { data: img.data, fileName: img.fileName, mimeType: img.mimeType },
+        });
         toast.success("Product added");
       }
       await invalidateVendor();
@@ -303,10 +325,6 @@ export default function VendorProductsPage() {
         mode={modalMode}
         product={editing}
         onSave={handleSave}
-        onUploadImage={async (file) => {
-          const { url } = await uploadVendorMedia(file);
-          return url;
-        }}
       />
     </div>
   );
