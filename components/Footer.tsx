@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+const LOGO_FULL_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775796811/logo_no_bg_eezddy.png";
+const LOGO_ICON_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775807863/icon_clean_transparent_ifuodx.png";
+
 const footerLinks = {
   company: [
     { label: "About Us", href: "#" },
@@ -72,14 +77,18 @@ export const Footer = () => {
           {/* Brand Section */}
           <div className="md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5">
-                <div className="font-black text-accent text-2xl">U</div>
-                <div className="font-black text-white text-2xl">C</div>
-              </div>
-              <div>
-                <div className="font-bold text-lg">URCHENZI</div>
-                <div className="text-xs text-white/70">CONNECT</div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_ICON_URL}
+                alt="FajiNow"
+                className="h-10 w-10 shrink-0 object-contain md:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_FULL_URL}
+                alt="FajiNow"
+                className="hidden h-12 w-auto object-contain md:block"
+              />
             </Link>
             <p className="text-sm text-white/70 leading-relaxed">
               We connect people, goods, and businesses seamlessly. Your community marketplace for everything you need.

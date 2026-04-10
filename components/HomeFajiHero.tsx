@@ -2,17 +2,27 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { addressFromGoogle, currentPosition, reverseGeocode } from "@/lib/maps/googleMaps";
+import {
+  addressFromGoogle,
+  currentPosition,
+  geocodePlace,
+  reverseGeocode,
+  searchPlaces,
+} from "@/lib/maps/googleMaps";
 import { useLocationStore } from "@/store/locationStore";
 
-type HomeGlovoHeroProps = {
+type HomeFajiHeroProps = {
   search: string;
   onSearchChange: (value: string) => void;
 };
 
-export const HomeGlovoHero = ({ search, onSearchChange }: HomeGlovoHeroProps) => {
+export const HomeFajiHero = ({ search, onSearchChange }: HomeFajiHeroProps) => {
   const [loadingCurrent, setLoadingCurrent] = useState(false);
+  const [predictions, setPredictions] = useState<Array<{ placeId: string; description: string }>>([]);
+  const [loadingPredictions, setLoadingPredictions] = useState(false);
+  const [selectingPrediction, setSelectingPrediction] = useState(false);
   const addAddress = useLocationStore((state) => state.addAddress);
+  const selectAddress = useLocationStore((state) => state.selectAddress);
 
   const onUseCurrent = async () => {
     setLoadingCurrent(true);
@@ -33,6 +43,46 @@ export const HomeGlovoHero = ({ search, onSearchChange }: HomeGlovoHeroProps) =>
       toast.error(err instanceof Error ? err.message : "Could not get current location.");
     } finally {
       setLoadingCurrent(false);
+    }
+  };
+
+  const onSearchAddress = async (value: string) => {
+    onSearchChange(value);
+    if (!value.trim()) {
+      setPredictions([]);
+      return;
+    }
+    setLoadingPredictions(true);
+    try {
+      const results = await searchPlaces(value);
+      setPredictions(results);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to load address suggestions.");
+      setPredictions([]);
+    } finally {
+      setLoadingPredictions(false);
+    }
+  };
+
+  const onSelectPrediction = async (placeId: string) => {
+    setSelectingPrediction(true);
+    try {
+      const place = await geocodePlace(placeId);
+      const entry = addressFromGoogle({
+        address: place.address,
+        lat: place.coords.lat,
+        lng: place.coords.lng,
+        label: "Other",
+      });
+      addAddress(entry);
+      selectAddress(entry);
+      onSearchChange(place.address);
+      setPredictions([]);
+      toast.success("Address selected.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not select that address.");
+    } finally {
+      setSelectingPrediction(false);
     }
   };
 
@@ -69,7 +119,7 @@ export const HomeGlovoHero = ({ search, onSearchChange }: HomeGlovoHeroProps) =>
             </span>
             <input
               value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => void onSearchAddress(e.target.value)}
               placeholder="What's your address?"
               className="min-w-0 flex-1 bg-transparent py-2 text-sm text-foreground placeholder:text-muted outline-none dark:text-foreground dark:placeholder:text-muted md:text-base"
             />
@@ -85,6 +135,25 @@ export const HomeGlovoHero = ({ search, onSearchChange }: HomeGlovoHeroProps) =>
               →
             </span>
           </div>
+          {(loadingPredictions || predictions.length > 0) && (
+            <div className="mt-2 overflow-hidden rounded-2xl border border-white/30 bg-surface shadow-[0_12px_24px_rgba(0,0,0,0.16)] dark:border-border">
+              {loadingPredictions ? (
+                <p className="px-4 py-3 text-sm text-muted">Searching addresses...</p>
+              ) : (
+                predictions.map((p) => (
+                  <button
+                    key={p.placeId}
+                    type="button"
+                    disabled={selectingPrediction}
+                    onClick={() => void onSelectPrediction(p.placeId)}
+                    className="block w-full border-b border-border/60 px-4 py-3 text-left text-sm text-foreground transition hover:bg-brand/10 disabled:opacity-60"
+                  >
+                    {p.description}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => void onUseCurrent()}

@@ -22,13 +22,28 @@ const CATEGORIES: VendorCategory[] = [
   "quick-commerce",
 ];
 
+function buildSettingsPatch(draft: VendorStoreSettings): Partial<VendorStoreSettings> {
+  const slug = draft.storeSlug?.trim();
+  return {
+    storeName: draft.storeName,
+    tagline: draft.tagline,
+    category: draft.category,
+    minOrder: draft.minOrder,
+    deliveryFee: draft.deliveryFee,
+    prepTimeMin: draft.prepTimeMin,
+    prepTimeMax: draft.prepTimeMax,
+    isOpen: draft.isOpen,
+    storeSlug: slug ? slug : undefined,
+  };
+}
+
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
   const { storeId } = useStoreDashboard();
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: dashboardStoreKeys.settings(storeId),
-    queryFn: getVendorSettings,
+    queryFn: () => getVendorSettings(storeId),
   });
 
   const [draft, setDraft] = useState<VendorStoreSettings | null>(null);
@@ -39,7 +54,7 @@ export default function StoreSettingsPage() {
   }, [data]);
 
   const save = useMutation({
-    mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch),
+    mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch, storeId),
     onSuccess: () => {
       toast.success("Settings saved");
       void queryClient.invalidateQueries({ queryKey: dashboardStoreKeys.store(storeId) });
@@ -74,11 +89,7 @@ export default function StoreSettingsPage() {
         className="max-w-2xl space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-sm"
         onSubmit={(e) => {
           e.preventDefault();
-          const slug = draft.storeSlug?.trim();
-          save.mutate({
-            ...draft,
-            storeSlug: slug || undefined,
-          });
+          save.mutate(buildSettingsPatch(draft));
         }}
       >
         <div>

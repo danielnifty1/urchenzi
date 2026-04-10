@@ -12,7 +12,7 @@ import {
 import { useLocationStore } from "@/store/locationStore";
 
 type LocationSelectorProps = {
-  variant?: "default" | "glovo";
+  variant?: "default" | "faji";
 };
 
 export const LocationSelector = ({ variant = "default" }: LocationSelectorProps) => {
@@ -28,10 +28,10 @@ export const LocationSelector = ({ variant = "default" }: LocationSelectorProps)
   const addAddress = useLocationStore((state) => state.addAddress);
   const selectAddress = useLocationStore((state) => state.selectAddress);
 
-  const isGlovo = variant === "glovo";
+  const isFaji = variant === "faji";
   const title = useMemo(
-    () => (isGlovo ? selected.address.split(",")[0]?.trim() || selected.label : selected.label),
-    [isGlovo, selected.address, selected.label],
+    () => (isFaji ? selected.address.split(",")[0]?.trim() || selected.label : selected.label),
+    [isFaji, selected.address, selected.label],
   );
 
   const onSelect = (address: (typeof addresses)[number]) => {
@@ -100,30 +100,54 @@ export const LocationSelector = ({ variant = "default" }: LocationSelectorProps)
     }
   };
 
+  const onSelectPrediction = async (placeId: string) => {
+    setAdding(true);
+    try {
+      const place = await geocodePlace(placeId);
+      const entry = addressFromGoogle({
+        address: place.address,
+        lat: place.coords.lat,
+        lng: place.coords.lng,
+        label: "Other",
+      });
+      addAddress(entry);
+      selectAddress(entry);
+      toast.success("Address selected.");
+      setQuery("");
+      setPredictions([]);
+      setIsOpen(false);
+      setShowAdd(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not select this address.");
+    } finally {
+      setAdding(false);
+    }
+  };
+
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={
-          isGlovo
+          isFaji
             ? "flex max-w-[min(100%,280px)] items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] shadow-md transition hover:bg-white/95 dark:bg-surface dark:text-foreground"
             : "flex items-center gap-2 rounded-lg bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:bg-border"
         }
       >
-        <span className={isGlovo ? "text-[#666]" : ""}>📍</span>
+        <span className={isFaji ? "text-[#666]" : ""}>📍</span>
         <span
           className={
-            isGlovo
+            isFaji
               ? "max-w-[140px] truncate sm:max-w-[200px]"
               : "hidden max-w-xs truncate sm:inline"
           }
         >
           {title}
         </span>
-        {!isGlovo && (
+        {!isFaji && (
           <span className="sm:hidden max-w-[100px] truncate text-xs">{selected.label}</span>
         )}
-        <span className={`text-xs ${isGlovo ? "text-[#666]" : "text-muted"}`}>
+        <span className={`text-xs ${isFaji ? "text-[#666]" : "text-muted"}`}>
           {isOpen ? "▲" : "▼"}
         </span>
       </button>

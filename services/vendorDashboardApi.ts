@@ -121,8 +121,26 @@ function unwrapData<T extends Record<string, unknown>>(data: T): T {
   return data;
 }
 
-export async function getVendorDashboard(): Promise<VendorDashboardOverview> {
-  const { data } = await http.get<Record<string, unknown>>("/vendor/dashboard");
+function extractSettingsPayload(data: Record<string, unknown>): Record<string, unknown> {
+  const body = unwrapData(data);
+  const nested = body.settings;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  return body;
+}
+
+export async function getVendorDashboard(storeId?: string | null): Promise<VendorDashboardOverview> {
+  const hasStore = Boolean(storeId && storeId.trim() !== "");
+  const sid = hasStore ? String(storeId).trim() : "";
+  const { data } = await http.get<Record<string, unknown>>("/vendor/dashboard", {
+    ...(hasStore
+      ? {
+          params: { storeId: sid },
+          headers: { "x-store-id": sid },
+        }
+      : {}),
+  });
   return normalizeOverview(unwrapData(data));
 }
 
@@ -154,16 +172,35 @@ export async function getVendorDashboardScoped(storeId: string): Promise<VendorD
   return normalizeOverview(unwrapData(data));
 }
 
-export async function getVendorSettings(): Promise<VendorStoreSettings> {
-  const { data } = await http.get<Record<string, unknown>>("/vendor/settings");
-  return normalizeSettings(unwrapData(data as Record<string, unknown>));
+export async function getVendorSettings(storeId?: string | null): Promise<VendorStoreSettings> {
+  const hasStore = Boolean(storeId && storeId.trim() !== "");
+  const sid = hasStore ? String(storeId).trim() : "";
+  const { data } = await http.get<Record<string, unknown>>("/vendor/settings", {
+    ...(hasStore
+      ? {
+          params: { storeId: sid },
+          headers: { "x-store-id": sid },
+        }
+      : {}),
+  });
+  return normalizeSettings(extractSettingsPayload(data as Record<string, unknown>));
 }
 
 export async function patchVendorSettings(
   patch: Partial<VendorStoreSettings>,
+  storeId?: string | null,
 ): Promise<VendorStoreSettings> {
-  const { data } = await http.patch<Record<string, unknown>>("/vendor/settings", patch);
-  return normalizeSettings(data as Record<string, unknown>);
+  const hasStore = Boolean(storeId && storeId.trim() !== "");
+  const sid = hasStore ? String(storeId).trim() : "";
+  const { data } = await http.patch<Record<string, unknown>>("/vendor/settings", patch, {
+    ...(hasStore
+      ? {
+          params: { storeId: sid },
+          headers: { "x-store-id": sid },
+        }
+      : {}),
+  });
+  return normalizeSettings(extractSettingsPayload(data as Record<string, unknown>));
 }
 
 export async function getVendorFeatures(): Promise<VendorFeatureFlags> {

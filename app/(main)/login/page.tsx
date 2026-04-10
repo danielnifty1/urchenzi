@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { needsEmailVerification } from "@/lib/auth/emailVerification";
 import { getPostAuthRedirectPath } from "@/lib/auth/postAuthRedirect";
 import { loginWithPassword, registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
@@ -46,12 +47,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const verificationToastShownRef = useRef(false);
   const returnUrl = searchParams.get("returnUrl");
   const safeReturnPath =
     returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : null;
   const resolvePostAuthPath = (session: UserSession) => {
     const rolePath = getPostAuthRedirectPath(session);
-    if (session.status === "active" && safeReturnPath) return safeReturnPath;
+    if (!needsEmailVerification(session) && session.status === "active" && safeReturnPath) {
+      return safeReturnPath;
+    }
     return rolePath;
   };
 
@@ -59,6 +63,32 @@ export default function LoginPage() {
     if (!authResolved || !user) return;
     router.replace(resolvePostAuthPath(user));
   }, [authResolved, user, router, safeReturnPath]);
+
+  useEffect(() => {
+    if (verificationToastShownRef.current) return;
+    const verified = (searchParams.get("verified") ?? "").trim();
+    if (!verified) return;
+
+    verificationToastShownRef.current = true;
+    const emailFromQuery = (searchParams.get("email") ?? "").trim();
+    const message =
+      (searchParams.get("message") ?? "").trim() ||
+      (verified === "1" ? "Email verified successfully." : "Email verification failed.");
+    const suffix = emailFromQuery ? ` (${emailFromQuery})` : "";
+
+    if (verified === "1" || verified.toLowerCase() === "true") {
+      toast.success(`${message}${suffix}`);
+    } else {
+      toast.error(`${message}${suffix}`);
+    }
+
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("verified");
+    next.delete("email");
+    next.delete("message");
+    const query = next.toString();
+    router.replace(query ? `/login?${query}` : "/login");
+  }, [searchParams, router]);
 
   const onGoogle = () => {
     window.location.href = googleAuthRedirectUrl();

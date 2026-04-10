@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
@@ -21,11 +22,28 @@ const CATEGORIES: VendorCategory[] = [
   "quick-commerce",
 ];
 
+function buildSettingsPatch(draft: VendorStoreSettings): Partial<VendorStoreSettings> {
+  const slug = draft.storeSlug?.trim();
+  return {
+    storeName: draft.storeName,
+    tagline: draft.tagline,
+    category: draft.category,
+    minOrder: draft.minOrder,
+    deliveryFee: draft.deliveryFee,
+    prepTimeMin: draft.prepTimeMin,
+    prepTimeMax: draft.prepTimeMax,
+    isOpen: draft.isOpen,
+    storeSlug: slug ? slug : undefined,
+  };
+}
+
 export default function VendorSettingsPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const storeId = (searchParams.get("storeId") ?? "").trim() || null;
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: vendorDashboardKeys.settings(),
-    queryFn: getVendorSettings,
+    queryKey: [...vendorDashboardKeys.settings(), storeId ?? "none"],
+    queryFn: () => getVendorSettings(storeId),
   });
 
   const [draft, setDraft] = useState<VendorStoreSettings | null>(null);
@@ -35,7 +53,7 @@ export default function VendorSettingsPage() {
   }, [data]);
 
   const save = useMutation({
-    mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch),
+    mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch, storeId),
     onSuccess: () => {
       toast.success("Settings saved");
       void queryClient.invalidateQueries({ queryKey: vendorDashboardKeys.all });
@@ -72,11 +90,7 @@ export default function VendorSettingsPage() {
         className="max-w-xl space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-sm"
         onSubmit={(e) => {
           e.preventDefault();
-          const slug = draft.storeSlug?.trim();
-          save.mutate({
-            ...draft,
-            storeSlug: slug || undefined,
-          });
+          save.mutate(buildSettingsPatch(draft));
         }}
       >
         <div>

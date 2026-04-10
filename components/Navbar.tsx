@@ -9,12 +9,17 @@ import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import { useThemeStore } from "@/store/themeStore";
 
+const LOGO_FULL_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775796811/logo_no_bg_eezddy.png";
+const LOGO_ICON_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775807863/icon_clean_transparent_ifuodx.png";
+
 export const Navbar = () => {
   const pathname = usePathname();
   const themeMode = useThemeStore((state) => state.mode);
   const themeHydrated = useThemeStore((state) => state.hasHydrated);
   const isHome = pathname === "/";
-  const glovoNav = isHome && themeHydrated && themeMode === "light";
+  const fajiNav = isHome && themeHydrated && themeMode === "light";
 
   const count = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.quantity, 0),
@@ -32,39 +37,45 @@ export const Navbar = () => {
   const cartBadge = count > 0 && (
     <span
       className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-        glovoNav ? "bg-[#00A082] text-white" : "bg-accent text-black"
+        fajiNav ? "bg-[#00A082] text-white" : "bg-accent text-black"
       }`}
     >
       {count}
     </span>
   );
 
-  if (glovoNav) {
+  if (fajiNav) {
     return (
-      <header className="fixed inset-x-0 top-0 z-[10050] isolate border-b border-black/5 bg-[#FFC244]/95 pt-[max(0px,env(safe-area-inset-top))] shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm [transform:translateZ(0)] md:sticky md:z-[100]">
+      <header className="isolate w-full border-b border-black/5 bg-[#FFC244]/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
         <nav className="mx-auto max-w-6xl px-4 py-3">
           <div className="flex min-w-0 items-center gap-2 touch-manipulation md:justify-between md:gap-3">
             <div className="min-w-0 flex-1 overflow-hidden md:flex-none">
               <Link
                 href="/"
-                className="flex min-w-0 max-w-full items-center gap-1.5 text-xl font-black tracking-tight text-[#00A082] sm:text-2xl"
+                className="flex min-w-0 max-w-full items-center gap-1.5"
               >
-                <span className="truncate">UrchenziConnect</span>
-                <span
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FFC244] text-xs ring-2 ring-[#00A082] sm:h-8 sm:w-8 sm:text-sm"
-                  aria-hidden
-                >
-                  📍
-                </span>
+                {/* Mobile: icon only. Desktop: full wordmark. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={LOGO_ICON_URL}
+                  alt="FajiNow"
+                  className="h-8 w-8 shrink-0 object-contain md:hidden"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={LOGO_FULL_URL}
+                  alt="FajiNow"
+                  className="hidden h-8 w-auto object-contain md:block"
+                />
               </Link>
             </div>
 
             <div className="hidden min-w-0 flex-1 justify-center px-4 md:flex">
-              <LocationSelector variant="glovo" />
+              <LocationSelector variant="faji" />
             </div>
 
             <div className="relative z-[2] flex min-h-11 shrink-0 items-center gap-2 md:gap-3">
-              <ThemeToggle variant="glovo" />
+              <ThemeToggle variant="faji" />
               <Link
                 href="/cart"
                 className="relative rounded-full bg-white/95 px-3 py-2 text-sm font-semibold text-[#1a1a1a] shadow-md ring-1 ring-black/5 transition hover:bg-white md:px-4"
@@ -127,7 +138,7 @@ export const Navbar = () => {
           {mobileMenuOpen && (
             <div className="mt-3 space-y-2 border-t border-black/10 pt-3 md:hidden">
               <div className="flex justify-center py-2">
-                <LocationSelector variant="glovo" />
+                <LocationSelector variant="faji" />
               </div>
               <Link href="/promos" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5">
                 Promos
@@ -148,19 +159,23 @@ export const Navbar = () => {
   }
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[10050] isolate border-b border-border bg-surface/95 pt-[max(0px,env(safe-area-inset-top))] shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm [transform:translateZ(0)] md:sticky md:z-[100]">
+    <header className="isolate w-full border-b border-border bg-surface/95 shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm">
       <nav className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex min-w-0 items-center gap-3 touch-manipulation md:justify-between md:gap-4">
           <div className="min-w-0 flex-1 overflow-hidden md:flex-none">
             <Link href="/" className="flex min-w-0 max-w-full items-center gap-2">
-              <div className="flex shrink-0 items-center gap-1">
-                <div className="font-black text-brand text-2xl">U</div>
-                <div className="font-black text-accent text-2xl">C</div>
-              </div>
-              <div className="hidden min-w-0 sm:block">
-                <div className="truncate text-xs font-bold tracking-wider text-foreground">URCHENZI CONNECT</div>
-                <div className="truncate text-xs font-medium text-muted">Your Community, Connected</div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_ICON_URL}
+                alt="FajiNow"
+                className="h-8 w-8 shrink-0 object-contain md:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_FULL_URL}
+                alt="FajiNow"
+                className="hidden h-9 w-auto object-contain md:block"
+              />
             </Link>
           </div>
 

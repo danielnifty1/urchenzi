@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import clsx from "clsx";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 import { useUserStore } from "@/store/userStore";
 import { fetchMyAccessibleStores } from "@/services/storeDirectoryApi";
 import { useStoreDashboard } from "@/contexts/StoreDashboardContext";
@@ -48,7 +49,9 @@ export function StoreDashboardShell({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0f1419] text-white">
+    <div className="flex min-h-screen flex-col bg-[#0f1419] text-white">
+      <EmailVerificationBanner />
+      <div className="flex min-h-0 w-full flex-1">
       <aside
         className={clsx(
           "fixed inset-y-0 left-0 z-50 w-64 transform border-r border-white/10 bg-[#0b0f14] transition-transform lg:static lg:translate-x-0",
@@ -207,6 +210,7 @@ export function StoreDashboardShell({ children }: { children: React.ReactNode })
         <main className="flex-1 bg-[#f4f6f8] p-4 text-foreground dark:bg-[#0f1419] md:p-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
+      </div>
       </div>
     </div>
   );

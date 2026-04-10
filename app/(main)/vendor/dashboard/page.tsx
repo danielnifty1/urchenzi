@@ -1,17 +1,46 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
-import { vendorDashboardKeys } from "@/lib/vendorDashboard/queryKeys";
+import { fetchMyAccessibleStores } from "@/services/storeDirectoryApi";
 import { getVendorDashboard } from "@/services/vendorDashboardApi";
 import { formatCurrency } from "@/utils/format";
 
 export default function VendorDashboardOverviewPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const storeIdFromQuery = (searchParams.get("storeId") ?? "").trim();
+  const storeId = storeIdFromQuery || null;
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: vendorDashboardKeys.overview(),
-    queryFn: getVendorDashboard,
+    queryKey: ["vendor-dashboard", "overview", storeId ?? "none"],
+    queryFn: () => getVendorDashboard(storeId),
   });
+  const storesQ = useQuery({
+    queryKey: ["vendor-dashboard", "stores", "overview"],
+    queryFn: fetchMyAccessibleStores,
+  });
+  const stores = storesQ.data ?? [];
+  const message = getApiErrorMessage(error);
+  const needsStoreSelection =
+    isError &&
+    /multiple stores exist|pass storeid|query parameter/i.test(message);
+  const activeStores = useMemo(
+    () => stores.filter((s) => s.status === "active" || s.status === "pending"),
+    [stores],
+  );
+
+  useEffect(() => {
+    if (storeId) return;
+    if (!storesQ.isSuccess) return;
+    if (activeStores.length !== 1) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("storeId", activeStores[0].id);
+    router.replace(`/vendor/dashboard?${params.toString()}`);
+  }, [activeStores, router, searchParams, storeId, storesQ.isSuccess]);
 
   if (isLoading) {
     return (
@@ -30,7 +59,32 @@ export default function VendorDashboardOverviewPage() {
     return (
       <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-8 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
         <p className="font-semibold">Could not load vendor dashboard</p>
-        <p className="mt-2 text-sm opacity-90">{getApiErrorMessage(error)}</p>
+        <p className="mt-2 text-sm opacity-90">{message}</p>
+        {needsStoreSelection ? (
+          <div className="mt-4 rounded-xl border border-rose-300/60 bg-white/60 p-4 dark:border-rose-800 dark:bg-black/20">
+            <p className="text-sm font-medium">Select a store to continue</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {storesQ.isLoading ? <span className="text-xs opacity-85">Loading stores...</span> : null}
+              {!storesQ.isLoading && activeStores.length === 0 ? (
+                <span className="text-xs opacity-85">No stores available.</span>
+              ) : null}
+              {activeStores.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("storeId", s.id);
+                    router.replace(`/vendor/dashboard?${params.toString()}`);
+                  }}
+                  className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-medium text-rose-900 transition hover:bg-rose-100 dark:border-rose-700 dark:bg-rose-950/60 dark:text-rose-100 dark:hover:bg-rose-900/60"
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <p className="mt-4 text-sm">
           If you recently became a vendor, your profile may still need approval, or the API may be
           unreachable. Check{" "}
@@ -48,21 +102,21 @@ export default function VendorDashboardOverviewPage() {
       label: "Products listed",
       value: String(metrics.productCount),
       hint: `${inStock} available now`,
-      href: "/vendor/dashboard/products",
+      href: `/vendor/dashboard/products${storeId ? `?storeId=${encodeURIComponent(storeId)}` : ""}`,
       accent: "from-emerald-500/20 to-[#00A082]/10",
     },
     {
       label: "Features enabled",
       value: `${metrics.featuresEnabledCount}/6`,
       hint: "Ordering, promos & more",
-      href: "/vendor/dashboard/features",
+      href: `/vendor/dashboard/features${storeId ? `?storeId=${encodeURIComponent(storeId)}` : ""}`,
       accent: "from-amber-500/15 to-orange-500/10",
     },
     {
       label: "Store status",
       value: settings.isOpen ? "Open" : "Closed",
       hint: settings.isOpen ? "Accepting orders" : "Hidden from rush",
-      href: "/vendor/dashboard/settings",
+      href: `/vendor/dashboard/settings${storeId ? `?storeId=${encodeURIComponent(storeId)}` : ""}`,
       accent: settings.isOpen
         ? "from-sky-500/15 to-blue-500/10"
         : "from-slate-500/20 to-zinc-500/10",
@@ -71,7 +125,7 @@ export default function VendorDashboardOverviewPage() {
       label: "Minimum order",
       value: formatCurrency(settings.minOrder),
       hint: `Delivery from ${formatCurrency(settings.deliveryFee)}`,
-      href: "/vendor/dashboard/settings",
+      href: `/vendor/dashboard/settings${storeId ? `?storeId=${encodeURIComponent(storeId)}` : ""}`,
       accent: "from-violet-500/15 to-purple-500/10",
     },
   ];
@@ -102,13 +156,13 @@ export default function VendorDashboardOverviewPage() {
             Multi-store dashboard
           </Link>
           <Link
-            href="/vendor/dashboard/products"
+            href={`/vendor/dashboard/products${storeId ? `?storeId=${encodeURIComponent(storeId)}` : ""}`}
             className="inline-flex items-center justify-center rounded-xl bg-[#00A082] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#00A082]/25 transition hover:bg-[#008f72]"
           >
             Manage menu
           </Link>
           <Link
-            href="/vendor/dashboard/features"
+            href={`/vendor/dashboard/features${storeId ? `?storeId=${encodeURIComponent(storeId)}` : ""}`}
             className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-background/80"
           >
             Feature switches

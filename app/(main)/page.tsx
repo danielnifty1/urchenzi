@@ -6,7 +6,7 @@ import { VendorCard } from "@/components/VendorCard";
 import { DownloadAppSection } from "@/components/DownloadAppSection";
 import { LetsDoTogetherSection } from "@/components/LetsDoTogetherSection";
 import { WhyChooseUsSection } from "@/components/WhyChooseUsSection";
-import { HomeGlovoHero } from "@/components/HomeGlovoHero";
+import { HomeFajiHero } from "@/components/HomeFajiHero";
 import { useVendors } from "@/hooks/useMarketplace";
 import { DEMO_STORE_SLUG, DEMO_STORE_SLUG_CLOSED } from "@/data/storePageMock";
 import { VendorCategory } from "@/types";
@@ -58,7 +58,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-0">
-      <HomeGlovoHero search={search} onSearchChange={setSearch} />
+      <HomeFajiHero search={search} onSearchChange={setSearch} />
 
       <section className="relative z-[1] mt-0 rounded-t-[2rem] border-x border-t border-border/60 bg-white/95 px-4 pb-10 pt-8 shadow-[0_-8px_32px_rgba(0,0,0,0.07)] dark:bg-surface/90 max-md:backdrop-blur-none md:-mt-8 md:rounded-t-[2.5rem] md:px-6 md:pb-12 md:pt-10 md:backdrop-blur-sm">
         <div className="mx-auto max-w-6xl space-y-8">
@@ -84,7 +84,7 @@ export default function HomePage() {
                   The Mart — full menu, cart &amp; checkout flow
                 </h3>
                 <p className="mt-1 max-w-xl text-sm text-muted">
-                  Opens the Glovo-style store UI at{" "}
+                  Opens the Faji-style store UI at{" "}
                   <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">
                     /store/{DEMO_STORE_SLUG}
                   </code>

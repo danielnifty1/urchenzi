@@ -127,7 +127,7 @@ const STORES: Record<string, StorePageData> = {
   [medplusStyle.slug]: medplusStyle,
 };
 
-/** Default open demo for the Glovo-style `/store/[slug]` experience (mock data, cart works). */
+/** Default open demo for the Faji-style `/store/[slug]` experience (mock data, cart works). */
 export const DEMO_STORE_SLUG = theMart.slug;
 
 /** Optional second mock: closed storefront (banner + “temporarily closed” state). */

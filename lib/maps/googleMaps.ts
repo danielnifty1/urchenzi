@@ -27,13 +27,23 @@ export async function loadGoogleMaps(): Promise<void> {
   if (!key) throw new Error("Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.");
 
   mapsLoader = new Promise<void>((resolve, reject) => {
+    const host = window.location.hostname;
+    const onFailure = () => {
+      mapsLoader = null;
+      reject(
+        new Error(
+          `Failed to load Google Maps script for host "${host}". Add this host to Google Maps API key allowed referrers (for example: http://localhost:3001/* and http://${host}:3001/*).`,
+        ),
+      );
+    };
+
     const existing = document.querySelector<HTMLScriptElement>('script[data-google-maps="1"]');
     if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Failed to load Google Maps.")), {
-        once: true,
-      });
-      return;
+      if (getGoogle()?.maps?.places) {
+        resolve();
+        return;
+      }
+      existing.remove();
     }
 
     const script = document.createElement("script");
@@ -42,7 +52,7 @@ export async function loadGoogleMaps(): Promise<void> {
     script.defer = true;
     script.dataset.googleMaps = "1";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps script."));
+    script.onerror = onFailure;
     document.head.appendChild(script);
   });
 

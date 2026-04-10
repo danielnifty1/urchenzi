@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { needsEmailVerification } from "@/lib/auth/emailVerification";
 import { useUserStore } from "@/store/userStore";
 
 export function VendorGate({ children }: { children: React.ReactNode }) {
@@ -13,6 +14,10 @@ export function VendorGate({ children }: { children: React.ReactNode }) {
     if (!authResolved) return;
     if (!user) {
       router.replace("/login?returnUrl=/vendor/dashboard");
+      return;
+    }
+    if (needsEmailVerification(user)) {
+      router.replace("/verify-email");
       return;
     }
     if (user.role !== "vendor") {
@@ -28,7 +33,7 @@ export function VendorGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || user.role !== "vendor") {
+  if (!user || needsEmailVerification(user) || user.role !== "vendor") {
     return null;
   }
 

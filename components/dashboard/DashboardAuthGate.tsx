@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { needsEmailVerification } from "@/lib/auth/emailVerification";
 import { useUserStore } from "@/store/userStore";
 
 /** Requires a resolved session with any logged-in user for `/dashboard/**`. */
@@ -14,6 +15,10 @@ export function DashboardAuthGate({ children }: { children: React.ReactNode }) {
     if (!authResolved) return;
     if (!user) {
       router.replace(`/login?returnUrl=${encodeURIComponent("/dashboard")}`);
+      return;
+    }
+    if (needsEmailVerification(user)) {
+      router.replace("/verify-email");
     }
   }, [authResolved, user, router]);
 
@@ -25,7 +30,7 @@ export function DashboardAuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!user || needsEmailVerification(user)) {
     return null;
   }
 
