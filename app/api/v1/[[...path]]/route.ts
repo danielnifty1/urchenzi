@@ -21,6 +21,15 @@ function backendOrigin(): string {
   return (process.env.API_INTERNAL_ORIGIN ?? "http://127.0.0.1:3010").replace(/\/$/, "");
 }
 
+function normalizeDevSetCookie(header: string): string {
+  // LAN dev often runs on http://172.x.x.x:3001 while backend is localhost.
+  // Drop Domain/Secure so browser accepts cookie for current host over HTTP.
+  let out = header.replace(/;\s*Domain=[^;]*/gi, "");
+  out = out.replace(/;\s*Secure/gi, "");
+  out = out.replace(/;\s*SameSite=None/gi, "; SameSite=Lax");
+  return out;
+}
+
 async function proxy(req: NextRequest, ctx: { params: Promise<{ path?: string[] }> }) {
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -52,11 +61,16 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path?: string[] 
     status: res.status,
     statusText: res.statusText,
   });
+  const setCookieValues =
+    (res.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
   res.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (HOP_BY_HOP.has(lower) || lower === "transfer-encoding") return;
+    if (HOP_BY_HOP.has(lower) || lower === "transfer-encoding" || lower === "set-cookie") return;
     out.headers.append(key, value);
   });
+  for (const cookie of setCookieValues) {
+    out.headers.append("set-cookie", normalizeDevSetCookie(cookie));
+  }
   return out;
 }
 

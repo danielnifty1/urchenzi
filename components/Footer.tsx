@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+const LOGO_FULL_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775796811/logo_no_bg_eezddy.png";
+const LOGO_ICON_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775807863/icon_clean_transparent_ifuodx.png";
+
 const footerLinks = {
   company: [
     { label: "About Us", href: "#" },
@@ -72,14 +77,18 @@ export const Footer = () => {
           {/* Brand Section */}
           <div className="md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5">
-                <div className="font-black text-accent text-2xl">U</div>
-                <div className="font-black text-white text-2xl">C</div>
-              </div>
-              <div>
-                <div className="font-bold text-lg">URCHENZI</div>
-                <div className="text-xs text-white/70">CONNECT</div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_ICON_URL}
+                alt="FajiNow"
+                className="h-10 w-10 shrink-0 object-contain md:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_FULL_URL}
+                alt="FajiNow"
+                className="hidden h-12 w-auto object-contain md:block"
+              />
             </Link>
             <p className="text-sm text-white/70 leading-relaxed">
               We connect people, goods, and businesses seamlessly. Your community marketplace for everything you need.
@@ -119,52 +128,54 @@ export const Footer = () => {
           </div>
 
           {/* Links Sections */}
-          <div>
-            <h4 className="font-bold mb-4 text-white">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-brand transition"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <div className="flex flex-wrap gap-6 md:col-span-3 md:grid md:grid-cols-3 md:gap-6">
+            <div className="min-w-[140px] flex-1">
+              <h4 className="font-bold mb-4 text-white">Company</h4>
+              <ul className="space-y-3">
+                {footerLinks.company.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/70 hover:text-brand transition"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Services</h4>
-            <ul className="space-y-3">
-              {footerLinks.services.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-brand transition"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+            <div className="min-w-[140px] flex-1">
+              <h4 className="font-bold mb-4 text-white">Services</h4>
+              <ul className="space-y-3">
+                {footerLinks.services.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/70 hover:text-brand transition"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="font-bold mb-4 text-white">Support</h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-brand transition"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <div className="min-w-[140px] flex-1">
+              <h4 className="font-bold mb-4 text-white">Support</h4>
+              <ul className="space-y-3">
+                {footerLinks.support.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/70 hover:text-brand transition"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Newsletter */}
@@ -193,7 +204,7 @@ export const Footer = () => {
         <div className="border-t border-white/10 pt-8 space-y-6">
           <div className="flex flex-col md:flex-row gap-8 justify-between items-start md:items-center">
             {/* App Links */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
               <a
                 href="#"
                 className="px-4 py-2 bg-white/10 hover:bg-brand/20 rounded-lg text-sm font-semibold transition"
@@ -215,7 +226,7 @@ export const Footer = () => {
             </div>
 
             {/* Legal Links */}
-            <div className="flex flex-wrap gap-4 text-xs text-white/70">
+            <div className="grid grid-cols-2 gap-3 text-xs text-white/70 sm:flex sm:flex-wrap sm:gap-4">
               {footerLinks.legal.map((link) => (
                 <a key={link.label} href={link.href} className="hover:text-brand transition">
                   {link.label}

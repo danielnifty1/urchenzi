@@ -1,4 +1,5 @@
 import type { VendorCategory } from "@/types";
+import type { StoreImageInput } from "@/types/vendorStore";
 
 export type VendorDashboardProduct = {
   id: string;
@@ -8,6 +9,30 @@ export type VendorDashboardProduct = {
   category: string;
   inStock: boolean;
   image: string;
+};
+
+/** Nested image on POST /vendor/products (FileUploadDto). */
+export type VendorProductImagePayload = Pick<StoreImageInput, "data" | "fileName" | "mimeType">;
+
+/** POST /vendor/products — CreateVendorProductDto */
+export type CreateVendorProductPayload = {
+  storeId: string;
+  name: string;
+  description?: string;
+  price: number;
+  category?: string;
+  inStock?: boolean;
+  image: VendorProductImagePayload;
+};
+
+/** PATCH /vendor/products/:id — PatchVendorProductDto */
+export type PatchVendorProductPayload = {
+  name?: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  inStock?: boolean;
+  image?: string | null;
 };
 
 export type VendorFeatureFlags = {

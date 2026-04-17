@@ -2,6 +2,7 @@ export type VendorCategory = "food" | "groceries" | "pharmacy" | "shops" | "rest
 
 export type Vendor = {
   id: string;
+  storeSlug?: string;
   name: string;
   image: string;
   rating: number;
@@ -71,6 +72,12 @@ export type ApiAuthUser = {
   userid: string;
   role: string;
   status?: string;
+  /** When false, user must verify email (see POST /auth/resend-verification). */
+  emailVerified?: boolean;
+  email_verified?: boolean;
+  isEmailVerified?: boolean;
+  is_email_verified?: boolean;
+  verified?: boolean;
   email: string;
   createdAt: string;
   /** Nullable — varchar 100; set via registration / OAuth / customer onboarding. */
@@ -85,11 +92,17 @@ export type AuthLoginResponse = {
   message: string;
   access_token?: string;
   accessToken?: string;
+  refreshToken?: string;
+  status?: string;
+  /** Backend currently returns this typo spelling on login/refresh. */
+  isEmailVerifed?: boolean;
+  /** Backward/forward compatible alias. */
+  isEmailVerified?: boolean;
   user: ApiAuthUser;
 };
 
 export type UserRole = "customer" | "vendor" | "rider" | "admin";
-export type UserStatus = "pending" | "active" | "suspended";
+export type UserStatus = "pending" | "active" | "suspended" | "unverified";
 
 export type UserSession = {
   id: string;
@@ -104,6 +117,8 @@ export type UserSession = {
   userid?: string;
   role?: UserRole;
   status?: UserStatus;
+  /** Mirrors API; when false, show verify-email UI and resend. */
+  emailVerified?: boolean;
   /** Delivery/contact — required for vendor/rider onboarding (ProfileCompleteGuard). */
   phone?: string;
   address?: string;

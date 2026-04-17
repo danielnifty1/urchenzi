@@ -1,8 +1,12 @@
 import axios from "axios";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
 import { http } from "@/lib/api/client";
 import type {
+  CreateVendorProductPayload,
+  PatchVendorProductPayload,
   VendorDashboardProduct,
   VendorFeatureFlags,
+  VendorProductImagePayload,
   VendorStoreSettings,
 } from "@/types/vendorDashboard";
 import type { VendorCategory } from "@/types";
@@ -118,8 +122,26 @@ function unwrapData<T extends Record<string, unknown>>(data: T): T {
   return data;
 }
 
-export async function getVendorDashboard(): Promise<VendorDashboardOverview> {
-  const { data } = await http.get<Record<string, unknown>>("/vendor/dashboard");
+function extractSettingsPayload(data: Record<string, unknown>): Record<string, unknown> {
+  const body = unwrapData(data);
+  const nested = body.settings;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  return body;
+}
+
+export async function getVendorDashboard(storeId?: string | null): Promise<VendorDashboardOverview> {
+  const hasStore = Boolean(storeId && storeId.trim() !== "");
+  const sid = hasStore ? String(storeId).trim() : "";
+  const { data } = await http.get<Record<string, unknown>>("/vendor/dashboard", {
+    ...(hasStore
+      ? {
+          params: { storeId: sid },
+          headers: { "x-store-id": sid },
+        }
+      : {}),
+  });
   return normalizeOverview(unwrapData(data));
 }
 
@@ -145,21 +167,66 @@ export async function getVendorDashboardVendorWide(): Promise<VendorDashboardOve
 /** Same as getVendorDashboard but forces store context (for parallel global aggregation). */
 export async function getVendorDashboardScoped(storeId: string): Promise<VendorDashboardOverview> {
   const { data } = await http.get<Record<string, unknown>>("/vendor/dashboard", {
+    params: { storeId },
     headers: { "x-store-id": storeId },
   });
   return normalizeOverview(unwrapData(data));
 }
 
-export async function getVendorSettings(): Promise<VendorStoreSettings> {
-  const { data } = await http.get<Record<string, unknown>>("/vendor/settings");
-  return normalizeSettings(unwrapData(data as Record<string, unknown>));
+export async function getVendorSettings(storeId?: string | null): Promise<VendorStoreSettings> {
+  const hasStore = Boolean(storeId && storeId.trim() !== "");
+  const sid = hasStore ? String(storeId).trim() : "";
+  const { data } = await http.get<Record<string, unknown>>("/vendor/settings", {
+    ...(hasStore
+      ? {
+          params: { storeId: sid },
+          headers: { "x-store-id": sid },
+        }
+      : {}),
+  });
+  return normalizeSettings(extractSettingsPayload(data as Record<string, unknown>));
+}
+
+export type PatchVendorSettingsPayload = Partial<
+  Pick<
+    VendorStoreSettings,
+    "storeName" | "tagline" | "category" | "minOrder" | "deliveryFee" | "prepTimeMin" | "prepTimeMax" | "isOpen" | "storeSlug"
+  >
+> & {
+  image?: VendorProductImagePayload;
+};
+
+function asPatchVendorSettingsDto(patch: PatchVendorSettingsPayload): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (patch.storeName !== undefined) body.storeName = patch.storeName;
+  if (patch.tagline !== undefined) body.tagline = patch.tagline;
+  if (patch.category !== undefined) body.category = patch.category;
+  if (patch.minOrder !== undefined) body.minOrder = patch.minOrder;
+  if (patch.deliveryFee !== undefined) body.deliveryFee = patch.deliveryFee;
+  if (patch.prepTimeMin !== undefined) body.prepTimeMin = patch.prepTimeMin;
+  if (patch.prepTimeMax !== undefined) body.prepTimeMax = patch.prepTimeMax;
+  if (patch.isOpen !== undefined) body.isOpen = patch.isOpen;
+  if (patch.storeSlug !== undefined) body.storeSlug = patch.storeSlug;
+  if (patch.image !== undefined) body.image = patch.image;
+  return body;
 }
 
 export async function patchVendorSettings(
-  patch: Partial<VendorStoreSettings>,
+  patch: PatchVendorSettingsPayload,
+  storeId?: string | null,
 ): Promise<VendorStoreSettings> {
-  const { data } = await http.patch<Record<string, unknown>>("/vendor/settings", patch);
-  return normalizeSettings(data as Record<string, unknown>);
+  const hasStore = Boolean(storeId && storeId.trim() !== "");
+  const sid = hasStore ? String(storeId).trim() : "";
+  const body = asPatchVendorSettingsDto(patch);
+  const { data } = await http.patch<Record<string, unknown>>("/vendor/settings", body, {
+    ...(hasStore
+      ? {
+          params: { storeId: sid },
+          headers: { "x-store-id": sid },
+        }
+      : {}),
+  });
+  return normalizeSettings(extractSettingsPayload(data as Record<string, unknown>));
 }
 
 export async function getVendorFeatures(): Promise<VendorFeatureFlags> {
@@ -210,18 +277,40 @@ export async function getVendorProducts(q: VendorProductsQuery = {}): Promise<Ve
   };
 }
 
-export type CreateVendorProductBody = Omit<VendorDashboardProduct, "id"> & { storeId: string };
+export async function createVendorProduct(body: CreateVendorProductPayload): Promise<VendorDashboardProduct> {
+  const payload: Record<string, unknown> = {
+    storeId: body.storeId,
+    name: body.name.trim(),
+    price: body.price,
+    image: {
+      data: body.image.data,
+      fileName: body.image.fileName,
+      mimeType: body.image.mimeType,
+    },
+  };
+  const d = body.description?.trim();
+  if (d) payload.description = d;
+  const c = body.category?.trim();
+  if (c) payload.category = c;
+  if (body.inStock !== undefined) payload.inStock = body.inStock;
 
-export async function createVendorProduct(body: CreateVendorProductBody): Promise<VendorDashboardProduct> {
-  const { data } = await http.post<Record<string, unknown>>("/vendor/products", body);
+  const { data } = await http.post<Record<string, unknown>>("/vendor/products", payload);
   return normalizeProduct(data as Record<string, unknown>);
 }
 
 export async function patchVendorProduct(
   id: string,
-  patch: Partial<Omit<VendorDashboardProduct, "id">>,
+  patch: PatchVendorProductPayload,
 ): Promise<VendorDashboardProduct> {
-  const { data } = await http.patch<Record<string, unknown>>(`/vendor/products/${id}`, patch);
+  const body: Record<string, unknown> = {};
+  if (patch.name !== undefined) body.name = patch.name;
+  if (patch.description !== undefined) body.description = patch.description;
+  if (patch.price !== undefined) body.price = patch.price;
+  if (patch.category !== undefined) body.category = patch.category;
+  if (patch.inStock !== undefined) body.inStock = patch.inStock;
+  if (patch.image !== undefined) body.image = patch.image;
+
+  const { data } = await http.patch<Record<string, unknown>>(`/vendor/products/${id}`, body);
   return normalizeProduct(data as Record<string, unknown>);
 }
 
@@ -230,8 +319,7 @@ export async function deleteVendorProduct(id: string): Promise<void> {
 }
 
 export async function uploadVendorMedia(file: File): Promise<{ url: string }> {
-  const form = new FormData();
-  form.append("file", file);
-  const { data } = await http.post<{ url: string }>("/vendor/media", form);
+  const image = await imagePayloadFromFile(file, "vendor media");
+  const { data } = await http.post<{ url: string }>("/vendor/media", { image });
   return data;
 }

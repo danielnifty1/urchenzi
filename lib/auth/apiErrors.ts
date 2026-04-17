@@ -39,8 +39,14 @@ export function getApiErrorMessage(err: unknown, fallback = "Something went wron
     if (data?.error) return data.error;
     if (err.response?.status === 401) return "Invalid email or password.";
     if (err.response?.status === 404) return "Service not found. Check NEXT_PUBLIC_API_URL.";
+    if ([500, 502, 503, 504].includes(err.response?.status ?? 0)) {
+      return "The server is temporarily unavailable. Please try again shortly.";
+    }
+    if (err.code === "ECONNABORTED") {
+      return "The request timed out. Please check your connection and try again.";
+    }
     if (err.code === "ERR_NETWORK") {
-      return "Cannot reach the API. Is the backend running and CORS allowing this origin?";
+      return "Cannot reach the server right now. Please check your network or try again shortly.";
     }
   }
   if (err instanceof Error) return err.message;

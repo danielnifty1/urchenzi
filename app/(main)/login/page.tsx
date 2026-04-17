@@ -1,13 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { needsEmailVerification } from "@/lib/auth/emailVerification";
 import { getPostAuthRedirectPath } from "@/lib/auth/postAuthRedirect";
 import { loginWithPassword, registerWithPassword, googleAuthRedirectUrl } from "@/services/authApi";
 import { useUserStore } from "@/store/userStore";
+import type { UserSession } from "@/types";
 
 type Mode = "signin" | "signup";
 
@@ -34,8 +36,9 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useUserStore((state) => state.login);
   const user = useUserStore((state) => state.user);
   const authResolved = useUserStore((state) => state.authResolved);
@@ -43,12 +46,51 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const verificationToastShownRef = useRef(false);
+  const returnUrl = searchParams.get("returnUrl");
+  const safeReturnPath =
+    returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : null;
+  const resolvePostAuthPath = (session: UserSession) => {
+    const rolePath = getPostAuthRedirectPath(session);
+    if (!needsEmailVerification(session) && session.status === "active" && safeReturnPath) {
+      return safeReturnPath;
+    }
+    return rolePath;
+  };
 
   useEffect(() => {
     if (!authResolved || !user) return;
-    router.replace(getPostAuthRedirectPath(user));
-  }, [authResolved, user, router]);
+    router.replace(resolvePostAuthPath(user));
+  }, [authResolved, user, router, safeReturnPath]);
+
+  useEffect(() => {
+    if (verificationToastShownRef.current) return;
+    const verified = (searchParams.get("verified") ?? "").trim();
+    if (!verified) return;
+
+    verificationToastShownRef.current = true;
+    const emailFromQuery = (searchParams.get("email") ?? "").trim();
+    const message =
+      (searchParams.get("message") ?? "").trim() ||
+      (verified === "1" ? "Email verified successfully." : "Email verification failed.");
+    const suffix = emailFromQuery ? ` (${emailFromQuery})` : "";
+
+    if (verified === "1" || verified.toLowerCase() === "true") {
+      toast.success(`${message}${suffix}`);
+    } else {
+      toast.error(`${message}${suffix}`);
+    }
+
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("verified");
+    next.delete("email");
+    next.delete("message");
+    const query = next.toString();
+    router.replace(query ? `/login?${query}` : "/login");
+  }, [searchParams, router]);
 
   const onGoogle = () => {
     window.location.href = googleAuthRedirectUrl();
@@ -80,7 +122,7 @@ export default function LoginPage() {
             });
       login(session);
       toast.success(mode === "signin" ? "Welcome back." : "Account created.");
-      window.location.assign(getPostAuthRedirectPath(session));
+      window.location.assign(resolvePostAuthPath(session));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -111,7 +153,9 @@ export default function LoginPage() {
             type="button"
             onClick={() => setMode("signin")}
             className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
-              mode === "signin" ? "bg-brand-strong text-white" : "text-muted hover:text-foreground"
+              mode === "signin"
+                ? "bg-[#1a3a52] text-white dark:bg-brand"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Sign in
@@ -120,7 +164,9 @@ export default function LoginPage() {
             type="button"
             onClick={() => setMode("signup")}
             className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
-              mode === "signup" ? "bg-brand-strong text-white" : "text-muted hover:text-foreground"
+              mode === "signup"
+                ? "bg-[#1a3a52] text-white dark:bg-brand"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Sign up
@@ -156,32 +202,52 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <input
-            type="password"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            placeholder="Password"
-            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={mode === "signup" ? 8 : undefined}
-          />
-          {mode === "signup" && (
+          <div className="relative">
             <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="Confirm password"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              placeholder="Password"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-12 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={8}
+              minLength={mode === "signup" ? 8 : undefined}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-border hover:text-foreground"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
+          {mode === "signup" && (
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="Confirm password"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-12 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-border hover:text-foreground"
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           )}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-xl bg-brand-strong py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50"
+            className="w-full rounded-xl bg-[#1a3a52] py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-50 dark:bg-brand"
           >
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
@@ -210,5 +276,17 @@ export default function LoginPage() {
         )}
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-md py-16 text-center text-sm text-muted">Loading…</div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -1,4 +1,6 @@
 import { http } from "@/lib/api/client";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
+import type { StoreImageInput } from "@/types/vendorStore";
 
 export type VendorOnboardingStatus =
   | "not_started"
@@ -13,8 +15,23 @@ export type VendorOnboardingDocument = {
   url: string;
 };
 
+/** Nested logo on POST /vendors/onboard (same shape as other image uploads). */
+export type VendorOnboardLogoPayload = Pick<StoreImageInput, "data" | "fileName" | "mimeType">;
+
+/** Matches server CreateVendorDto — POST /vendors/onboard */
+export type CreateVendorOnboardBody = {
+  businessName: string;
+  category: string;
+  address: string;
+  logo?: VendorOnboardLogoPayload;
+};
+
 export type VendorOnboardingResponse = {
   status: VendorOnboardingStatus;
+  /** Legal / registered business name (from vendor registration). */
+  businessName?: string;
+  address?: string;
+  logoUrl?: string;
   storeName?: string;
   category?: string;
   businessType?: string;
@@ -86,6 +103,9 @@ export function normalizeVendorOnboarding(raw: Record<string, unknown>): VendorO
 
   return {
     status: (String(raw.status ?? "not_started") as VendorOnboardingStatus) || "not_started",
+    businessName: str(raw.businessName ?? raw.business_name),
+    address: str(raw.address ?? raw.businessAddress ?? raw.business_address),
+    logoUrl: str(raw.logoUrl ?? raw.logo_url),
     storeName: str(raw.storeName ?? raw.store_name),
     category: str(raw.category),
     businessType: str(raw.businessType ?? raw.business_type),
@@ -109,6 +129,29 @@ export function normalizeVendorOnboarding(raw: Record<string, unknown>): VendorO
 export async function getVendorOnboarding(): Promise<VendorOnboardingResponse> {
   const { data } = await http.get<Record<string, unknown>>("/vendor/onboarding");
   return normalizeVendorOnboarding(unwrapData(data as Record<string, unknown>));
+}
+
+/** POST /vendors/onboard — register vendor (CreateVendorDto). */
+export async function createVendorOnboard(body: CreateVendorOnboardBody): Promise<unknown> {
+  const payload: Record<string, unknown> = {
+    businessName: body.businessName.trim(),
+    category: body.category.trim(),
+    address: body.address.trim(),
+  };
+  if (body.logo) {
+    payload.logo = {
+      data: body.logo.data,
+      fileName: body.logo.fileName,
+      mimeType: body.logo.mimeType,
+    };
+  }
+  const { data } = await http.post<unknown>("/vendors/onboard", payload, {
+    skipStoreContext: true,
+  });
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return {};
+  }
+  return unwrapData(data as Record<string, unknown>);
 }
 
 export async function patchVendorOnboarding(
@@ -139,14 +182,24 @@ export async function uploadVendorOnboardingDocument(
   type: VendorOnboardingDocumentType,
   file: File,
 ): Promise<{ id: string; url: string; type: string }> {
-  const form = new FormData();
-  form.append("type", type);
-  form.append("file", file);
-  const { data } = await http.post<{ id: string; url: string; type: string }>(
-    "/vendor/onboarding/documents",
-    form,
-  );
-  return data;
+  const image = await imagePayloadFromFile(file, type);
+  try {
+    const { data } = await http.post<{ id: string; url: string; type: string }>(
+      "/vendor/onboarding/documents",
+      { type, image },
+    );
+    return data;
+  } catch {
+    // Legacy: multipart with raw file (older backends).
+    const form = new FormData();
+    form.append("type", type);
+    form.append("file", file);
+    const { data } = await http.post<{ id: string; url: string; type: string }>(
+      "/vendor/onboarding/documents",
+      form,
+    );
+    return data;
+  }
 }
 
 export async function deleteVendorOnboardingDocument(documentId: string): Promise<void> {

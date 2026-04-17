@@ -1,15 +1,44 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { SavedAddresses } from "@/components/SavedAddresses";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { getMyProfile } from "@/services/profileApi";
 
 export default function ProfilePage() {
-  const [user] = useState({
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+1 234 567 8900",
+  const profileQ = useQuery({
+    queryKey: ["profile", "me"],
+    queryFn: getMyProfile,
   });
+
+  const user = profileQ.data;
+  const displayName =
+    [user?.firstName, user?.lastName].filter((x) => Boolean(x && x.trim())).join(" ").trim() ||
+    user?.email ||
+    "User";
+
+  if (profileQ.isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="h-32 animate-pulse rounded-3xl bg-surface" />
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="h-28 animate-pulse rounded-2xl bg-surface" />
+          <div className="h-28 animate-pulse rounded-2xl bg-surface" />
+          <div className="h-28 animate-pulse rounded-2xl bg-surface" />
+        </div>
+      </div>
+    );
+  }
+
+  if (profileQ.isError || !user) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-8 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
+        <p className="font-semibold">Could not load profile</p>
+        <p className="mt-2 text-sm opacity-90">{getApiErrorMessage(profileQ.error)}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -23,7 +52,7 @@ export default function ProfilePage() {
           <p className="text-sm text-muted uppercase tracking-wide font-semibold mb-2">
             Name
           </p>
-          <p className="text-2xl font-bold text-foreground">{user.name}</p>
+          <p className="text-2xl font-bold text-foreground">{displayName}</p>
         </div>
         <div className="rounded-2xl bg-surface p-6 border border-border shadow-sm">
           <p className="text-sm text-muted uppercase tracking-wide font-semibold mb-2">
@@ -37,7 +66,22 @@ export default function ProfilePage() {
           <p className="text-sm text-muted uppercase tracking-wide font-semibold mb-2">
             Phone
           </p>
-          <p className="text-lg font-semibold text-foreground">{user.phone}</p>
+          <p className="text-lg font-semibold text-foreground">{user.phone ?? "Not set"}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="rounded-2xl bg-surface p-6 border border-border shadow-sm">
+          <p className="text-sm text-muted uppercase tracking-wide font-semibold mb-2">Role</p>
+          <p className="text-lg font-semibold text-foreground capitalize">{user.role || "unknown"}</p>
+        </div>
+        <div className="rounded-2xl bg-surface p-6 border border-border shadow-sm">
+          <p className="text-sm text-muted uppercase tracking-wide font-semibold mb-2">Status</p>
+          <p className="text-lg font-semibold text-foreground capitalize">{user.status || "unknown"}</p>
+        </div>
+        <div className="rounded-2xl bg-surface p-6 border border-border shadow-sm">
+          <p className="text-sm text-muted uppercase tracking-wide font-semibold mb-2">Address</p>
+          <p className="text-sm font-semibold text-foreground break-words">{user.address ?? "Not set"}</p>
         </div>
       </div>
 

@@ -3,13 +3,14 @@ import Link from "next/link";
 import { Vendor } from "@/types";
 
 export const VendorCard = ({ vendor }: { vendor: Vendor }) => {
+  const href = vendor.storeSlug ? `/store/${vendor.storeSlug}` : `/vendor/${vendor.id}`;
   const shouldShowFreeDelivery =
     vendor.freeDeliveryThreshold && vendor.deliveryFee > 0;
   const discountPercent = vendor.discount ? `${vendor.discount}%` : null;
 
   return (
     <Link
-      href={`/vendor/${vendor.id}`}
+      href={href}
       className="group relative overflow-hidden rounded-2xl border border-border/80 bg-surface shadow-sm transition hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(0,0,0,0.14)]"
     >
       <div className="relative h-40 w-full overflow-hidden bg-gray-200">

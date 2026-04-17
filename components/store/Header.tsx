@@ -2,18 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { LocationSelector } from "@/components/LocationSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useUserStore } from "@/store/userStore";
 
 type StoreHeaderProps = {
-  locationLabel?: string;
   searchQuery: string;
   onSearchChange: (value: string) => void;
   searchDisabled?: boolean;
 };
 
 export function Header({
-  locationLabel = "Obafemi Awolowo Way",
   searchQuery,
   onSearchChange,
   searchDisabled = false,
@@ -37,18 +36,22 @@ export function Header({
       }`}
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 md:gap-4 md:px-6">
-        <Link href="/" className="shrink-0 text-xl font-black text-[#00A082]">
-          Urchenzi<span className="text-foreground">Connect</span>
+        <Link href="/" className="shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://res.cloudinary.com/dguwrb1fl/image/upload/v1775796811/logo_no_bg_eezddy.png"
+            alt="UrchenziConnect"
+            className="hidden h-12 w-auto object-contain sm:block"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://res.cloudinary.com/dguwrb1fl/image/upload/v1775807863/icon_clean_transparent_ifuodx.png"
+            alt="UrchenziConnect"
+            className="h-8 w-8 object-contain sm:hidden"
+          />
         </Link>
 
-        <button
-          type="button"
-          className="flex max-w-[200px] items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm font-medium text-foreground md:max-w-[240px]"
-        >
-          <span aria-hidden>📍</span>
-          <span className="truncate">{locationLabel}</span>
-          <span className="text-muted">▼</span>
-        </button>
+        <LocationSelector />
 
         <form
           className="order-last flex w-full min-w-0 flex-1 items-center md:order-none md:max-w-xl md:justify-center"

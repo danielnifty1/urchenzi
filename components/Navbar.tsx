@@ -9,15 +9,17 @@ import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import { useThemeStore } from "@/store/themeStore";
 
+const LOGO_FULL_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775796811/logo_no_bg_eezddy.png";
+const LOGO_ICON_URL =
+  "https://res.cloudinary.com/dguwrb1fl/image/upload/v1775807863/icon_clean_transparent_ifuodx.png";
+
 export const Navbar = () => {
   const pathname = usePathname();
-  if (pathname.startsWith("/store") || pathname.startsWith("/vendor/dashboard")) {
-    return null;
-  }
   const themeMode = useThemeStore((state) => state.mode);
   const themeHydrated = useThemeStore((state) => state.hasHydrated);
   const isHome = pathname === "/";
-  const glovoNav = isHome && themeHydrated && themeMode === "light";
+  const fajiNav = isHome && themeHydrated && themeMode === "light";
 
   const count = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.quantity, 0),
@@ -27,40 +29,74 @@ export const Navbar = () => {
   const logout = useUserStore((state) => state.logout);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Keep hook order stable across route transitions.
+  if (pathname.startsWith("/store") || pathname.startsWith("/vendor/dashboard")) {
+    return null;
+  }
+
   const cartBadge = count > 0 && (
     <span
       className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-        glovoNav ? "bg-[#00A082] text-white" : "bg-accent text-black"
+        fajiNav ? "bg-[#00A082] text-white" : "bg-accent text-black"
       }`}
     >
       {count}
     </span>
   );
 
-  if (glovoNav) {
+  if (fajiNav) {
     return (
-      <header className="sticky top-0 z-[100] isolate border-b border-black/5 bg-[#FFC244]/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+      <header className="isolate w-full border-b border-black/5 bg-[#FFC244]/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
         <nav className="mx-auto max-w-6xl px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <Link
-              href="/"
-              className="flex flex-shrink-0 items-center gap-1.5 text-xl font-black tracking-tight text-[#00A082] sm:text-2xl"
-            >
-              <span>UrchenziConnect</span>
-              <span
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFC244] text-xs ring-2 ring-[#00A082] sm:h-8 sm:w-8 sm:text-sm"
-                aria-hidden
+          <div className="flex min-w-0 items-center gap-2 touch-manipulation md:justify-between md:gap-3">
+            <div className="min-w-0 flex-1 overflow-hidden md:flex-none">
+              <Link
+                href="/"
+                className="flex min-w-0 max-w-full items-center gap-1.5"
               >
-                📍
-              </span>
-            </Link>
-
-            <div className="hidden min-w-0 flex-1 justify-center px-4 md:flex">
-              <LocationSelector variant="glovo" />
+                {/* Mobile: icon only. Desktop: full wordmark. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={LOGO_ICON_URL}
+                  alt="FajiNow"
+                  className="h-8 w-8 shrink-0 object-contain md:hidden"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={LOGO_FULL_URL}
+                  alt="FajiNow"
+                  className="hidden h-[3.85rem] w-auto object-contain md:block"
+                />
+              </Link>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3">
-              <ThemeToggle variant="glovo" />
+            <div className="hidden min-w-0 flex-1 justify-center px-4 md:flex">
+              <LocationSelector variant="faji" />
+            </div>
+
+            <div className="hidden items-center gap-5 lg:flex">
+              <Link
+                href="/"
+                className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+              >
+                Home
+              </Link>
+              <Link
+                href="/promos"
+                className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+              >
+                Promos
+              </Link>
+              <Link
+                href="/orders/history"
+                className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+              >
+                Orders
+              </Link>
+            </div>
+
+            <div className="relative z-[2] flex min-h-11 shrink-0 items-center gap-2 md:gap-3">
+              <ThemeToggle variant="faji" />
               <Link
                 href="/cart"
                 className="relative rounded-full bg-white/95 px-3 py-2 text-sm font-semibold text-[#1a1a1a] shadow-md ring-1 ring-black/5 transition hover:bg-white md:px-4"
@@ -104,7 +140,7 @@ export const Navbar = () => {
               ) : (
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 rounded-full bg-[#00A082] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#008f72] md:px-5"
+                  className="relative z-[3] flex items-center gap-2 rounded-full bg-[#00A082] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#008f72] md:px-5"
                 >
                   <span aria-hidden>👤</span>
                   Login
@@ -113,7 +149,7 @@ export const Navbar = () => {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="rounded-lg p-2 hover:bg-black/5 md:hidden"
+                className="relative z-[3] inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg p-2 [-webkit-tap-highlight-color:transparent] hover:bg-black/5 active:bg-black/10 md:hidden"
               >
                 {mobileMenuOpen ? "✕" : "☰"}
               </button>
@@ -123,7 +159,7 @@ export const Navbar = () => {
           {mobileMenuOpen && (
             <div className="mt-3 space-y-2 border-t border-black/10 pt-3 md:hidden">
               <div className="flex justify-center py-2">
-                <LocationSelector variant="glovo" />
+                <LocationSelector variant="faji" />
               </div>
               <Link href="/promos" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5">
                 Promos
@@ -144,19 +180,25 @@ export const Navbar = () => {
   }
 
   return (
-    <header className="sticky top-0 z-[100] isolate border-b border-border bg-surface/95 shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm">
+    <header className="isolate w-full border-b border-border bg-surface/95 shadow-[0_8px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm">
       <nav className="mx-auto max-w-6xl px-4 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex flex-shrink-0 items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="font-black text-brand text-2xl">U</div>
-              <div className="font-black text-accent text-2xl">C</div>
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-xs font-bold tracking-wider text-foreground">URCHENZI CONNECT</div>
-              <div className="text-xs font-medium text-muted">Your Community, Connected</div>
-            </div>
-          </Link>
+        <div className="flex min-w-0 items-center gap-3 touch-manipulation md:justify-between md:gap-4">
+          <div className="min-w-0 flex-1 overflow-hidden md:flex-none">
+            <Link href="/" className="flex min-w-0 max-w-full items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_ICON_URL}
+                alt="FajiNow"
+                className="h-8 w-8 shrink-0 object-contain md:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOGO_FULL_URL}
+                alt="FajiNow"
+                className="hidden h-[3.85rem] w-auto object-contain md:block"
+              />
+            </Link>
+          </div>
 
           <div className="hidden flex-1 items-center justify-center gap-6 md:flex">
             <Link href="/" className="text-sm font-medium text-foreground transition hover:text-brand">
@@ -174,11 +216,13 @@ export const Navbar = () => {
             <LocationSelector />
           </div>
 
-          <div className="relative z-[1] flex items-center gap-2 touch-manipulation md:gap-3">
-            <ThemeToggle variant="default" />
+          <div className="relative z-[2] flex min-h-11 shrink-0 items-center gap-2 touch-manipulation md:gap-3">
+            <span className="relative z-[3]">
+              <ThemeToggle variant="default" />
+            </span>
             <Link
               href="/cart"
-              className="relative rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-brand-dark md:px-4"
+              className="relative z-[3] rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-brand-dark md:px-4"
             >
               🛒
               {cartBadge}
@@ -219,7 +263,7 @@ export const Navbar = () => {
             ) : (
               <Link
                 href="/login"
-                className="rounded-full border-2 border-brand px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 md:px-4"
+                className="relative z-[3] rounded-full border-2 border-brand px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 md:px-4"
               >
                 Login
               </Link>
@@ -227,7 +271,7 @@ export const Navbar = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-lg p-2 hover:bg-background md:hidden"
+              className="relative z-[3] inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg p-2 [-webkit-tap-highlight-color:transparent] hover:bg-background active:bg-border md:hidden"
             >
               {mobileMenuOpen ? "✕" : "☰"}
             </button>

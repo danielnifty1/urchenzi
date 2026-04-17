@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAdminAuth } from "@/components/admin/AdminAuthProvider";
+import { adminVendorGetById } from "@/services/adminVendorApi";
 
 function IconDashboard(props: { className?: string }) {
   return (
@@ -108,6 +110,41 @@ function IconX(props: { className?: string }) {
 }
 
 const iconClass = "h-5 w-5 shrink-0 opacity-90";
+const STORE_ID_RE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+
+type StoreOption = { id: string; name: string };
+
+function extractStoreOptions(raw: unknown): StoreOption[] {
+  const out: StoreOption[] = [];
+  const seen = new Set<string>();
+
+  const push = (idRaw: unknown, nameRaw: unknown) => {
+    const id = idRaw != null ? String(idRaw) : "";
+    if (!STORE_ID_RE.test(id) || seen.has(id)) return;
+    seen.add(id);
+    const name = nameRaw != null && String(nameRaw).trim() !== "" ? String(nameRaw) : `Store ${id.slice(0, 8)}…`;
+    out.push({ id, name });
+  };
+
+  const scan = (node: unknown, depth: number) => {
+    if (!node || depth > 6) return;
+    if (Array.isArray(node)) {
+      for (const item of node) scan(item, depth + 1);
+      return;
+    }
+    if (typeof node !== "object") return;
+    const o = node as Record<string, unknown>;
+
+    push(o.storeId ?? o.store_id ?? o.id, o.storeName ?? o.store_name ?? o.name ?? o.slug);
+
+    for (const key of ["stores", "storeList", "items", "results", "data"]) {
+      if (key in o) scan(o[key], depth + 1);
+    }
+  };
+
+  scan(raw, 0);
+  return out;
+}
 
 function SidebarLink({
   href,
@@ -138,14 +175,19 @@ function SidebarLink({
   );
 }
 
-function vendorNav(vendorId: string) {
+function withStoreQuery(href: string, storeId: string | null): string {
+  if (!storeId) return href;
+  return `${href}?storeId=${encodeURIComponent(storeId)}`;
+}
+
+function vendorNav(vendorId: string, storeId: string | null) {
   const base = `/admin/${vendorId}`;
   return [
-    { href: base, label: "Overview", icon: <IconEye className={iconClass} /> },
-    { href: `${base}/settings`, label: "Settings", icon: <IconSettings className={iconClass} /> },
-    { href: `${base}/features`, label: "Features", icon: <IconSparkles className={iconClass} /> },
-    { href: `${base}/products`, label: "Products", icon: <IconPackage className={iconClass} /> },
-    { href: `${base}/media`, label: "Media", icon: <IconImage className={iconClass} /> },
+    { href: withStoreQuery(base, storeId), label: "Overview", icon: <IconEye className={iconClass} /> },
+    { href: withStoreQuery(`${base}/settings`, storeId), label: "Settings", icon: <IconSettings className={iconClass} /> },
+    { href: withStoreQuery(`${base}/features`, storeId), label: "Features", icon: <IconSparkles className={iconClass} /> },
+    { href: withStoreQuery(`${base}/products`, storeId), label: "Products", icon: <IconPackage className={iconClass} /> },
+    { href: withStoreQuery(`${base}/media`, storeId), label: "Media", icon: <IconImage className={iconClass} /> },
   ] as const;
 }
 
@@ -162,8 +204,15 @@ export function AdminSidebarLayout({
   vendorId?: string | null;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { user, logout } = useAdminAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const queryStoreId = searchParams.get("storeId");
+  const validQueryStoreId = queryStoreId && STORE_ID_RE.test(queryStoreId) ? queryStoreId : null;
+  const [storedStoreId, setStoredStoreId] = useState<string | null>(null);
+  const [storeIdInput, setStoreIdInput] = useState("");
+  const [selectedStoreId, setSelectedStoreId] = useState("");
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
   useEffect(() => {
@@ -175,6 +224,49 @@ export function AdminSidebarLayout({
   const rbacEntry = pathname === "/admin/rbac" || pathname.startsWith("/admin/rbac/");
 
   const baseVendor = vendorId ? `/admin/${vendorId}` : "";
+  const activeStoreId = validQueryStoreId ?? storedStoreId ?? null;
+  const vendorStoresQ = useQuery({
+    queryKey: ["admin-vendor-store-options", vendorId],
+    queryFn: async () => {
+      if (!vendorId) return [] as StoreOption[];
+      const raw = await adminVendorGetById(vendorId);
+      return extractStoreOptions(raw);
+    },
+    enabled: Boolean(vendorId),
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!vendorId) return;
+    if (typeof window === "undefined") return;
+    const sid = window.localStorage.getItem("active_store_id");
+    setStoredStoreId(sid && STORE_ID_RE.test(sid) ? sid : null);
+  }, [vendorId]);
+
+  useEffect(() => {
+    setStoreIdInput(activeStoreId ?? "");
+    setSelectedStoreId(activeStoreId ?? "");
+  }, [activeStoreId]);
+
+  useEffect(() => {
+    if (!vendorId || !validQueryStoreId) return;
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("active_store_id", validQueryStoreId);
+    setStoredStoreId(validQueryStoreId);
+  }, [validQueryStoreId, vendorId]);
+
+  const applyStoreContext = useCallback(() => {
+    if (!vendorId) return;
+    const next = storeIdInput.trim();
+    if (!STORE_ID_RE.test(next)) return;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("active_store_id", next);
+    }
+    setStoredStoreId(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("storeId", next);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [pathname, router, searchParams, storeIdInput, vendorId]);
 
   const sidebarBody = (
     <>
@@ -228,11 +320,56 @@ export function AdminSidebarLayout({
                 {shortVendorId(vendorId)}
               </code>
             </div>
-            {vendorNav(vendorId).map(({ href, label, icon }) => {
+            <div className="mb-3 rounded-lg border border-zinc-800/80 bg-zinc-900/50 p-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Store context</p>
+              {vendorStoresQ.data && vendorStoresQ.data.length > 0 ? (
+                <div className="mb-2">
+                  <label className="mb-1 block text-[11px] text-zinc-500" htmlFor="admin-store-switch">
+                    Select store
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      id="admin-store-switch"
+                      value={selectedStoreId}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedStoreId(value);
+                        setStoreIdInput(value);
+                      }}
+                      className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-[11px] text-zinc-200 outline-none focus:border-emerald-600"
+                    >
+                      <option value="">Select store</option>
+                      {vendorStoresQ.data.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+              <input
+                type="text"
+                value={storeIdInput}
+                onChange={(e) => setStoreIdInput(e.target.value)}
+                placeholder="Store UUID"
+                className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-200 outline-none focus:border-emerald-600"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                onClick={applyStoreContext}
+                disabled={!STORE_ID_RE.test(storeIdInput.trim())}
+                className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Apply store
+              </button>
+            </div>
+            {vendorNav(vendorId, activeStoreId).map(({ href, label, icon }) => {
               const on =
-                href === baseVendor
-                  ? pathname === href || pathname === `${baseVendor}/`
-                  : pathname === href || pathname.startsWith(`${href}/`);
+                label === "Overview"
+                  ? pathname === baseVendor || pathname === `${baseVendor}/`
+                  : pathname === href.split("?")[0] || pathname.startsWith(`${href.split("?")[0]}/`);
               return (
                 <SidebarLink
                   key={href}

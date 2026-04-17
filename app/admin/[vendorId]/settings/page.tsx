@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { VendorField, VendorFormCard, vendorInputClass } from "@/components/admin/vendor/VendorFormCard";
 import { adminVendorGetSettings } from "@/services/adminVendorApi";
 import { formatAdminError } from "@/lib/admin/formatAdminError";
@@ -13,10 +13,17 @@ import {
 } from "@/lib/admin/vendorWorkspace";
 
 const readOnlyClass = `${vendorInputClass} cursor-not-allowed bg-zinc-900/70 text-zinc-400`;
+const UUID_RE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 
 export default function AdminVendorSettingsPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const vendorId = String(params.vendorId ?? "");
+  const storeIdFromQuery = searchParams.get("storeId");
+  const validStoreIdFromQuery =
+    storeIdFromQuery && UUID_RE.test(storeIdFromQuery) ? storeIdFromQuery : null;
+  const [fallbackStoreId, setFallbackStoreId] = useState<string | null>(null);
+  const storeId = validStoreIdFromQuery ?? fallbackStoreId ?? null;
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -32,12 +39,23 @@ export default function AdminVendorSettingsPage() {
   const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
+    if (validStoreIdFromQuery) return;
+    if (typeof window === "undefined") return;
+    const fromStorage = window.localStorage.getItem("active_store_id");
+    setFallbackStoreId(fromStorage && UUID_RE.test(fromStorage) ? fromStorage : null);
+  }, [validStoreIdFromQuery]);
+
+  useEffect(() => {
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
       setLoadError("");
       try {
-        const raw = await adminVendorGetSettings(vendorId);
+        const raw = await adminVendorGetSettings(vendorId, storeId);
         if (cancelled) return;
         const s = extractSettingsBlob(raw);
         setStoreName(getStr(s, "storeName", "store_name"));
@@ -59,7 +77,7 @@ export default function AdminVendorSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [vendorId]);
+  }, [storeId, vendorId]);
 
   const categoryOptions = useMemo(() => {
     const base = [...STORE_CATEGORY_OPTIONS];
@@ -80,6 +98,16 @@ export default function AdminVendorSettingsPage() {
   if (loadError) {
     return <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-4 text-red-200">{loadError}</div>;
   }
+  if (!storeId) {
+    return (
+      <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-amber-100">
+        <p className="font-semibold">Store context required</p>
+        <p className="mt-1 text-sm">
+          Open this page as <code className="font-mono">/admin/{vendorId}/settings?storeId=STORE_UUID</code>.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -91,10 +119,10 @@ export default function AdminVendorSettingsPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
+      {/* <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
         Admin vendor routes expose <span className="font-medium">GET</span> settings only. PATCH is not available on
         admin endpoints.
-      </div>
+      </div> */}
 
       <div className="space-y-8">
         <VendorFormCard title="Store identity" description="Name, messaging, and URL slug customers see.">

@@ -1,4 +1,4 @@
-/** Types for the Glovo-style store detail page (mock / UI only). */
+/** Types for the Faji-style store detail page (mock / UI only). */
 
 export type StoreCategoryNode = {
   id: string;

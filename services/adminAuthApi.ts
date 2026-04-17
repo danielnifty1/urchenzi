@@ -1,10 +1,15 @@
 import { http } from "@/lib/api/client";
 import { setAccessToken } from "@/lib/auth/token";
-import { apiUserToSession } from "@/lib/auth/mapUser";
+import { apiUserToSession, apiUserToSessionWithOverrides } from "@/lib/auth/mapUser";
 import type { ApiAuthUser, AuthLoginResponse, UserSession } from "@/types";
 
 function readAccessToken(data: AuthLoginResponse): string {
   return data.accessToken ?? data.access_token ?? "";
+}
+
+function readIsEmailVerified(data: AuthLoginResponse): boolean | undefined {
+  const raw = data.isEmailVerifed ?? data.isEmailVerified;
+  return typeof raw === "boolean" ? raw : undefined;
 }
 
 export class NotAdminError extends Error {
@@ -25,7 +30,10 @@ export async function loginAsAdmin(email: string, password: string): Promise<Use
     throw new NotAdminError();
   }
   setAccessToken(readAccessToken(data));
-  return apiUserToSession(data.user);
+  return apiUserToSessionWithOverrides(data.user, {
+    status: data.status,
+    emailVerified: readIsEmailVerified(data),
+  });
 }
 
 export async function logoutAdmin(): Promise<void> {
