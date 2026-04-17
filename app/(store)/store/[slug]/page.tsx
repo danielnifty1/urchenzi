@@ -1,24 +1,24 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useParams } from "next/navigation";
 import { StorePageShell } from "@/components/store/StorePageShell";
-import { getStorePageData } from "@/data/storePageMock";
+import { StorefrontSkeleton } from "@/components/store/StorefrontSkeleton";
+import { useStorePage } from "@/hooks/useMarketplace";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 
-type Props = { params: Promise<{ slug: string }> };
+export default function StoreDetailPage() {
+  const { slug } = useParams<{ slug: string }>();
+  const { data, isLoading, isError, error } = useStorePage(String(slug ?? ""));
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const store = getStorePageData(slug);
-  if (!store) return { title: "Store" };
-  return {
-    title: `${store.name} · ${store.city}`,
-    description: `Order from ${store.name} on UrchenziConnect.`,
-  };
-}
-
-export default async function StoreDetailPage({ params }: Props) {
-  const { slug } = await params;
-  const store = getStorePageData(slug);
-  if (!store) notFound();
-
-  return <StorePageShell store={store} />;
+  if (isLoading) return <StorefrontSkeleton />;
+  if (isError || !data) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <p className="rounded-xl border border-rose-300 bg-rose-100/70 p-4 text-rose-700">
+          {getApiErrorMessage(error)}
+        </p>
+      </div>
+    );
+  }
+  return <StorePageShell store={data} />;
 }

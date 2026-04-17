@@ -65,13 +65,34 @@ export const Navbar = () => {
                 <img
                   src={LOGO_FULL_URL}
                   alt="FajiNow"
-                  className="hidden h-8 w-auto object-contain md:block"
+                  className="hidden h-[3.85rem] w-auto object-contain md:block"
                 />
               </Link>
             </div>
 
             <div className="hidden min-w-0 flex-1 justify-center px-4 md:flex">
               <LocationSelector variant="faji" />
+            </div>
+
+            <div className="hidden items-center gap-5 lg:flex">
+              <Link
+                href="/"
+                className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+              >
+                Home
+              </Link>
+              <Link
+                href="/promos"
+                className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+              >
+                Promos
+              </Link>
+              <Link
+                href="/orders/history"
+                className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+              >
+                Orders
+              </Link>
             </div>
 
             <div className="relative z-[2] flex min-h-11 shrink-0 items-center gap-2 md:gap-3">
@@ -174,7 +195,7 @@ export const Navbar = () => {
               <img
                 src={LOGO_FULL_URL}
                 alt="FajiNow"
-                className="hidden h-9 w-auto object-contain md:block"
+                className="hidden h-[3.85rem] w-auto object-contain md:block"
               />
             </Link>
           </div>

@@ -119,10 +119,10 @@ export default function AdminVendorSettingsPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
+      {/* <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-200/90">
         Admin vendor routes expose <span className="font-medium">GET</span> settings only. PATCH is not available on
         admin endpoints.
-      </div>
+      </div> */}
 
       <div className="space-y-8">
         <VendorFormCard title="Store identity" description="Name, messaging, and URL slug customers see.">

@@ -30,6 +30,10 @@ export default function VerifyEmailPage() {
   }, [authResolved, user, router]);
 
   const onResend = async () => {
+    if (!user?.email) {
+      toast.error("No signed-in user email found.");
+      return;
+    }
     setBusy(true);
     try {
       await resendVerificationEmail(user.email);

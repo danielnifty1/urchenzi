@@ -110,12 +110,12 @@ export default function VendorGlobalDashboardPage() {
         <p className="text-sm text-rose-400">{formatAdminError(globalQ.error)}</p>
       ) : g ? (
         <>
-          {g.partialData ? (
+          {/* {g.partialData ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-950/20 px-4 py-3 text-xs text-amber-100/90">
               Some metrics use client-side estimates until{" "}
               <code className="font-mono text-amber-200/90">GET /vendor/dashboard/global</code> is available.
             </p>
-          ) : null}
+          ) : null} */}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatsCard label="Total stores" value={g.totalStores} accent="emerald" />
             <StatsCard label="Total products" value={g.totalProducts} accent="violet" />

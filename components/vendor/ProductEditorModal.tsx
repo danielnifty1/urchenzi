@@ -40,6 +40,7 @@ export function ProductEditorModal({ open, onClose, mode, product, onSave }: Pro
   const [form, setForm] = useState<FormState>(empty);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -71,17 +72,23 @@ export function ProductEditorModal({ open, onClose, mode, product, onSave }: Pro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     if (mode === "add" && !imageFile) {
       toast.error("Choose an image file for the product.");
       return;
     }
-    await Promise.resolve(
-      onSave({
-        ...form,
-        imageFile,
-      }),
-    );
-    onClose();
+    setSaving(true);
+    try {
+      await Promise.resolve(
+        onSave({
+          ...form,
+          imageFile,
+        }),
+      );
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -90,7 +97,9 @@ export function ProductEditorModal({ open, onClose, mode, product, onSave }: Pro
         type="button"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         aria-label="Close"
-        onClick={onClose}
+        onClick={() => {
+          if (!saving) onClose();
+        }}
       />
       <div
         className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 shadow-2xl sm:rounded-2xl"
@@ -111,7 +120,10 @@ export function ProductEditorModal({ open, onClose, mode, product, onSave }: Pro
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              if (!saving) onClose();
+            }}
+            disabled={saving}
             className="rounded-lg p-2 text-muted hover:bg-background"
             aria-label="Close dialog"
           >
@@ -234,20 +246,32 @@ export function ProductEditorModal({ open, onClose, mode, product, onSave }: Pro
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                if (!saving) onClose();
+              }}
+              disabled={saving}
               className={clsx(
                 "rounded-xl px-5 py-2.5 text-sm font-semibold",
-                "border border-border text-foreground hover:bg-background",
+                "border border-border text-foreground hover:bg-background disabled:cursor-not-allowed disabled:opacity-50",
               )}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={mode === "add" && !imageFile}
-              className="rounded-xl bg-[#00A082] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#00A082]/25 transition hover:bg-[#008f72] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={saving || (mode === "add" && !imageFile)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00A082] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#00A082]/25 transition hover:bg-[#008f72] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {mode === "add" ? "Add product" : "Save changes"}
+              {saving ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Processing...
+                </>
+              ) : mode === "add" ? (
+                "Add product"
+              ) : (
+                "Save changes"
+              )}
             </button>
           </div>
         </form>

@@ -2,6 +2,7 @@ export type VendorCategory = "food" | "groceries" | "pharmacy" | "shops" | "rest
 
 export type Vendor = {
   id: string;
+  storeSlug?: string;
   name: string;
   image: string;
   rating: number;

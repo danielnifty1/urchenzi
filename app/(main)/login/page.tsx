@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -36,7 +36,7 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useUserStore((state) => state.login);
@@ -46,6 +46,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const verificationToastShownRef = useRef(false);
   const returnUrl = searchParams.get("returnUrl");
@@ -200,27 +202,47 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <input
-            type="password"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            placeholder="Password"
-            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={mode === "signup" ? 8 : undefined}
-          />
-          {mode === "signup" && (
+          <div className="relative">
             <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="Confirm password"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              placeholder="Password"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-12 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={8}
+              minLength={mode === "signup" ? 8 : undefined}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-border hover:text-foreground"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
+          {mode === "signup" && (
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="Confirm password"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 pr-12 text-foreground outline-none ring-brand-strong/30 focus:ring-2"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-border hover:text-foreground"
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           )}
           <button
             type="submit"
@@ -254,5 +276,17 @@ export default function LoginPage() {
         )}
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-md py-16 text-center text-sm text-muted">Loading…</div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useStoreDashboard } from "@/contexts/StoreDashboardContext";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { dashboardStoreKeys } from "@/lib/dashboard/queryKeys";
-import { getVendorSettings, patchVendorSettings, uploadVendorMedia } from "@/services/vendorDashboardApi";
-import type { VendorStoreSettings } from "@/types/vendorDashboard";
+import { getVendorSettings, patchVendorSettings } from "@/services/vendorDashboardApi";
+import type { VendorProductImagePayload, VendorStoreSettings } from "@/types/vendorDashboard";
 import type { VendorCategory } from "@/types";
 
 const CATEGORIES: VendorCategory[] = [
@@ -48,14 +49,17 @@ export default function StoreSettingsPage() {
 
   const [draft, setDraft] = useState<VendorStoreSettings | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pendingImage, setPendingImage] = useState<VendorProductImagePayload | undefined>(undefined);
 
   useEffect(() => {
     if (data) setDraft(data);
   }, [data]);
 
   const save = useMutation({
-    mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch, storeId),
+    mutationFn: (patch: Partial<VendorStoreSettings> & { image?: VendorProductImagePayload }) =>
+      patchVendorSettings(patch, storeId),
     onSuccess: () => {
+      setPendingImage(undefined);
       toast.success("Settings saved");
       void queryClient.invalidateQueries({ queryKey: dashboardStoreKeys.store(storeId) });
     },
@@ -89,7 +93,7 @@ export default function StoreSettingsPage() {
         className="max-w-2xl space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-sm"
         onSubmit={(e) => {
           e.preventDefault();
-          save.mutate(buildSettingsPatch(draft));
+          save.mutate({ ...buildSettingsPatch(draft), image: pendingImage });
         }}
       >
         <div>
@@ -116,9 +120,11 @@ export default function StoreSettingsPage() {
                   if (!file) return;
                   setUploading(true);
                   try {
-                    const { url } = await uploadVendorMedia(file);
+                    const image = await imagePayloadFromFile(file, "store image");
+                    const url = URL.createObjectURL(file);
+                    setPendingImage(image);
                     setDraft((d) => (d ? { ...d, storeImage: url } : d));
-                    toast.success("Image uploaded — save to persist");
+                    toast.success("Image ready — save to persist");
                   } catch (err) {
                     toast.error(getApiErrorMessage(err));
                   } finally {

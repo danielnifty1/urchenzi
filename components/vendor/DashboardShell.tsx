@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ACTIVE_STORE_STORAGE_KEY, setActiveStoreId } from "@/lib/store/activeStoreId";
 import { listMyStores } from "@/services/vendorStoresApi";
@@ -47,6 +47,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     staleTime: 60_000,
   });
   const stores = (storesQ.data ?? []).filter((s) => s.status === "active" || s.status === "draft");
+
+  const activeStore = useMemo(() => {
+    if (!stores.length) return null;
+    const sid = selectedStoreId.trim();
+    if (sid) return stores.find((s) => s.id === sid) ?? stores[0];
+    return stores[0];
+  }, [stores, selectedStoreId]);
 
   useEffect(() => {
     const sid = (searchParams.get("storeId") ?? "").trim();
@@ -100,11 +107,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             ✕
           </button>
         </div>
-        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-          <span className="text-2xl">🏪</span>
-          <div>
-            <div className="text-sm font-bold tracking-tight">Vendor Hub</div>
-            <div className="truncate text-xs text-white/50">UrchenziConnect</div>
+        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+            {activeStore?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={activeStore.image} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xl">🏪</div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-bold tracking-tight">
+              {storesQ.isPending ? "…" : activeStore?.name ?? "Vendor Hub"}
+            </div>
           </div>
         </div>
         <nav className="space-y-1 p-3">

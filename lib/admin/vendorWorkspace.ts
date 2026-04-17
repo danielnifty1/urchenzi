@@ -78,17 +78,38 @@ export function parseVendorDashboard(raw: unknown): VendorDashboardParts {
 
 /** Best-effort linked owner / user status from dashboard payload (snake or camel). */
 export function pickLinkedUserStatus(raw: Record<string, unknown>): string | null {
+  const asModerationStatus = (v: unknown): string | null => {
+    if (v == null) return null;
+    const s = String(v).toLowerCase().trim();
+    if (s === "active" || s === "suspended" || s === "banned") return s;
+    return null;
+  };
+
   const nestedKeys = ["user", "owner", "vendorUser", "linkedUser", "storeOwner"] as const;
   for (const key of nestedKeys) {
     const c = raw[key];
     if (c && typeof c === "object" && !Array.isArray(c)) {
       const o = c as Record<string, unknown>;
-      const s = o.status ?? o.userStatus;
-      if (s != null && String(s).trim() !== "") return String(s).toLowerCase();
+      const nested = asModerationStatus(o.status ?? o.userStatus ?? o.user_status ?? o.accountStatus ?? o.account_status);
+      if (nested) return nested;
     }
   }
-  const top = raw.userStatus ?? raw.ownerStatus ?? raw.accountStatus ?? raw.linkedUserStatus;
-  if (top != null && String(top).trim() !== "") return String(top).toLowerCase();
+
+  const topCandidates = [
+    raw.userStatus,
+    raw.user_status,
+    raw.ownerStatus,
+    raw.owner_status,
+    raw.accountStatus,
+    raw.account_status,
+    raw.linkedUserStatus,
+    raw.linked_user_status,
+    raw.status,
+  ];
+  for (const c of topCandidates) {
+    const top = asModerationStatus(c);
+    if (top) return top;
+  }
   return null;
 }
 
@@ -128,7 +149,119 @@ export function pickVendorRejectionReason(raw: Record<string, unknown>): string 
   return null;
 }
 
+function asNestedRecord(raw: Record<string, unknown>, keys: string[]): Record<string, unknown> | null {
+  for (const k of keys) {
+    const v = raw[k];
+    if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
+  }
+  return null;
+}
+
+function strFirst(blobs: (Record<string, unknown> | null | undefined)[], camel: string, snake: string): string {
+  for (const b of blobs) {
+    if (!b) continue;
+    const s = getStr(b, camel, snake);
+    if (s.trim() !== "") return s;
+  }
+  return "";
+}
+
+/** ISO-ish timestamp from vendor / onboarding payloads (camel or snake). */
+function strFirstDate(blobs: (Record<string, unknown> | null | undefined)[]): string | null {
+  const keys: [string, string][] = [
+    ["submittedAt", "submitted_at"],
+    ["createdAt", "created_at"],
+    ["updatedAt", "updated_at"],
+  ];
+  for (const [camel, snake] of keys) {
+    const s = strFirst(blobs, camel, snake);
+    if (!s) continue;
+    const t = Date.parse(s);
+    if (Number.isFinite(t)) {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(t));
+    }
+    return s;
+  }
+  return null;
+}
+
+/** Fields admins need to review approve/reject — best-effort across nested vendor / user / onboarding. */
+export type VendorApplicationSummary = {
+  vendorId: string;
+  legalBusinessName: string;
+  storeOrTradingName: string;
+  contactEmail: string;
+  contactPhone: string;
+  businessAddress: string;
+  category: string;
+  submittedOrCreated: string | null;
+};
+
+export function pickVendorApplicationSummary(raw: Record<string, unknown>): VendorApplicationSummary {
+  const onboarding = asNestedRecord(raw, ["onboarding", "vendorOnboarding", "vendor_onboarding"]);
+  const vendor = asNestedRecord(raw, ["vendor"]);
+  const user = asNestedRecord(raw, ["user", "owner", "linkedUser", "storeOwner", "vendorUser"]);
+
+  const idFromTop = getStr(raw, "id", "vendorId");
+  const idFromVendor = vendor ? getStr(vendor, "id", "vendorId") : "";
+  const vendorId = idFromTop.trim() || idFromVendor.trim();
+
+  const appPriority = [onboarding, vendor, raw].filter(Boolean) as Record<string, unknown>[];
+  const contactPriority = [user, onboarding, vendor, raw].filter(Boolean) as Record<string, unknown>[];
+
+  const legalBusinessName = strFirst(appPriority, "businessName", "business_name");
+  const storeOrTradingName = strFirst(appPriority, "storeName", "store_name");
+  const contactEmail = strFirst(contactPriority, "email", "email");
+  const contactPhone =
+    strFirst(contactPriority, "phone", "phone") ||
+    strFirst(contactPriority, "mobile", "mobile") ||
+    strFirst(contactPriority, "phoneNumber", "phone_number");
+  const businessAddress =
+    strFirst(appPriority, "address", "address") ||
+    strFirst(appPriority, "businessAddress", "business_address");
+  const category = strFirst(appPriority, "category", "category");
+
+  return {
+    vendorId,
+    legalBusinessName,
+    storeOrTradingName,
+    contactEmail,
+    contactPhone,
+    businessAddress,
+    category,
+    submittedOrCreated: strFirstDate([onboarding, vendor, raw]),
+  };
+}
+
+export function vendorApplicationSummaryHasDetail(s: VendorApplicationSummary): boolean {
+  return Boolean(
+    s.legalBusinessName ||
+      s.storeOrTradingName ||
+      s.contactEmail ||
+      s.contactPhone ||
+      s.businessAddress ||
+      s.category ||
+      s.submittedOrCreated,
+  );
+}
+
 const PRODUCT_LIST_ARRAY_KEYS = [
+  "items",
+  "data",
+  "products",
+  "results",
+  "content",
+  "records",
+  "rows",
+  "list",
+] as const;
+
+/** Prefer `stores` for GET /admin/vendors/:id/stores; other keys match common envelope shapes. */
+const STORE_LIST_ARRAY_KEYS = [
+  "stores",
   "items",
   "data",
   "products",
@@ -148,8 +281,7 @@ function asObjectRows(arr: unknown): Record<string, unknown>[] | null {
   return rows.length > 0 ? rows : null;
 }
 
-/** Pull product rows from admin/vendor list payloads (paginated or plain). */
-export function extractProductRowsFromListPayload(raw: unknown): Record<string, unknown>[] {
+function extractRowsFromListPayload(raw: unknown, arrayKeys: readonly string[]): Record<string, unknown>[] {
   function scan(node: unknown, depth: number): Record<string, unknown>[] | null {
     if (depth > 10 || node == null) return null;
 
@@ -159,7 +291,7 @@ export function extractProductRowsFromListPayload(raw: unknown): Record<string, 
     if (typeof node !== "object" || Array.isArray(node)) return null;
     const o = node as Record<string, unknown>;
 
-    for (const key of PRODUCT_LIST_ARRAY_KEYS) {
+    for (const key of arrayKeys) {
       if (!(key in o)) continue;
       const v = o[key];
       const got = asObjectRows(v);
@@ -192,6 +324,45 @@ export function extractProductRowsFromListPayload(raw: unknown): Record<string, 
   }
 
   return scan(raw, 0) ?? [];
+}
+
+/** Pull product rows from admin/vendor list payloads (paginated or plain). */
+export function extractProductRowsFromListPayload(raw: unknown): Record<string, unknown>[] {
+  return extractRowsFromListPayload(raw, PRODUCT_LIST_ARRAY_KEYS);
+}
+
+/** Pull store rows from GET /admin/vendors/:vendorId/stores (and similar envelopes). */
+export function extractStoreRowsFromListPayload(raw: unknown): Record<string, unknown>[] {
+  return extractRowsFromListPayload(raw, STORE_LIST_ARRAY_KEYS);
+}
+
+export type AdminVendorStoreRow = {
+  id: string;
+  name: string;
+  status: string;
+  slug: string | null;
+  address: string;
+};
+
+function normalizeAdminVendorStoreRow(o: Record<string, unknown>): AdminVendorStoreRow | null {
+  const id = o.id ?? o.storeId ?? o.store_id;
+  if (id == null || String(id).trim() === "") return null;
+  const statusRaw = o.status ?? o.storeStatus ?? o.store_status;
+  const status = statusRaw != null ? String(statusRaw).toLowerCase().trim() : "";
+  return {
+    id: String(id),
+    name: String(o.name ?? o.storeName ?? o.store_name ?? "Store"),
+    status: status || "unknown",
+    slug: o.slug != null && String(o.slug) !== "" ? String(o.slug) : null,
+    address: String(o.address ?? ""),
+  };
+}
+
+/** Normalize store list from admin vendors stores endpoint. */
+export function parseAdminVendorStoresList(raw: unknown): AdminVendorStoreRow[] {
+  return extractStoreRowsFromListPayload(raw)
+    .map(normalizeAdminVendorStoreRow)
+    .filter((x): x is AdminVendorStoreRow => x !== null);
 }
 
 export function parseAdminVendorProductList(raw: unknown): {

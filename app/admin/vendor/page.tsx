@@ -134,9 +134,15 @@ export default function AdminVendorDirectoryPage() {
   };
 
   const tabs: { id: Tab; label: string; hint: string }[] = [
-    { id: "vendors", label: "Vendors", hint: "GET /admin/vendors" },
-    { id: "riders", label: "Riders", hint: "GET /admin/riders" },
-    { id: "users", label: "Users", hint: "GET /admin/users" },
+    // { id: "vendors", label: "Vendors", hint: "GET /admin/vendorsd" },
+    { id: "vendors", label: "Vendors", hint: "" },
+
+    // { id: "riders", label: "Riders", hint: "GET /admin/riders" },
+    { id: "riders", label: "Riders", hint: "" },
+
+    // { id: "users", label: "Users", hint: "GET /admin/users" },
+    { id: "users", label: "Users", hint: "" },
+
   ];
 
   return (

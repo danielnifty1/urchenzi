@@ -6,6 +6,7 @@ import type {
   PatchVendorProductPayload,
   VendorDashboardProduct,
   VendorFeatureFlags,
+  VendorProductImagePayload,
   VendorStoreSettings,
 } from "@/types/vendorDashboard";
 import type { VendorCategory } from "@/types";
@@ -186,13 +187,38 @@ export async function getVendorSettings(storeId?: string | null): Promise<Vendor
   return normalizeSettings(extractSettingsPayload(data as Record<string, unknown>));
 }
 
+export type PatchVendorSettingsPayload = Partial<
+  Pick<
+    VendorStoreSettings,
+    "storeName" | "tagline" | "category" | "minOrder" | "deliveryFee" | "prepTimeMin" | "prepTimeMax" | "isOpen" | "storeSlug"
+  >
+> & {
+  image?: VendorProductImagePayload;
+};
+
+function asPatchVendorSettingsDto(patch: PatchVendorSettingsPayload): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (patch.storeName !== undefined) body.storeName = patch.storeName;
+  if (patch.tagline !== undefined) body.tagline = patch.tagline;
+  if (patch.category !== undefined) body.category = patch.category;
+  if (patch.minOrder !== undefined) body.minOrder = patch.minOrder;
+  if (patch.deliveryFee !== undefined) body.deliveryFee = patch.deliveryFee;
+  if (patch.prepTimeMin !== undefined) body.prepTimeMin = patch.prepTimeMin;
+  if (patch.prepTimeMax !== undefined) body.prepTimeMax = patch.prepTimeMax;
+  if (patch.isOpen !== undefined) body.isOpen = patch.isOpen;
+  if (patch.storeSlug !== undefined) body.storeSlug = patch.storeSlug;
+  if (patch.image !== undefined) body.image = patch.image;
+  return body;
+}
+
 export async function patchVendorSettings(
-  patch: Partial<VendorStoreSettings>,
+  patch: PatchVendorSettingsPayload,
   storeId?: string | null,
 ): Promise<VendorStoreSettings> {
   const hasStore = Boolean(storeId && storeId.trim() !== "");
   const sid = hasStore ? String(storeId).trim() : "";
-  const { data } = await http.patch<Record<string, unknown>>("/vendor/settings", patch, {
+  const body = asPatchVendorSettingsDto(patch);
+  const { data } = await http.patch<Record<string, unknown>>("/vendor/settings", body, {
     ...(hasStore
       ? {
           params: { storeId: sid },

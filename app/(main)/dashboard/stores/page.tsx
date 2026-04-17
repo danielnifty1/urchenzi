@@ -105,9 +105,9 @@ export default function DashboardStoresListPage() {
           <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-[1px] p-4">
             <div className="mx-auto mt-4 w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-xl md:mt-10">
               <h2 className="text-lg font-semibold text-white">Create store</h2>
-              <p className="mt-1 text-sm text-zinc-500">
+              {/* <p className="mt-1 text-sm text-zinc-500">
                 POST /stores — name, address, status, slug, optional image payload.
-              </p>
+              </p> */}
               <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-zinc-400" htmlFor="ns-name">

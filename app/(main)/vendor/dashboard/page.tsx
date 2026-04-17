@@ -86,9 +86,8 @@ export default function VendorDashboardOverviewPage() {
           </div>
         ) : null}
         <p className="mt-4 text-sm">
-          If you recently became a vendor, your profile may still need approval, or the API may be
-          unreachable. Check{" "}
-          <code className="rounded bg-black/10 px-1">NEXT_PUBLIC_API_URL</code> and try again.
+          If you recently became a vendor, your profile may still need approval, 
+          <code className="rounded bg-black/10 px-1"></code>contact support if this persist and try again.
         </p>
       </div>
     );

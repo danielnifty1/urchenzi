@@ -36,7 +36,7 @@ export function formatAdminError(err: unknown): string {
       parts.push("Request timed out. Check connectivity and retry.");
     }
     if (err.code === "ERR_NETWORK") {
-      parts.push("Cannot reach the server. Verify backend/network and try again.");
+      parts.push("Cannot reach the server. please try again.");
     }
     if (d?.errors && typeof d.errors === "object") {
       for (const [k, v] of Object.entries(d.errors)) {
