@@ -1,3 +1,7 @@
+import type { VendorOrderStatus } from "@/types/orderStatus";
+
+export type { OrderStatus, VendorOrderStatus } from "@/types/orderStatus";
+
 export type VendorStoreStatus = "active" | "pending";
 
 export type VendorStoreListItem = {
@@ -12,7 +16,7 @@ export type VendorStoreListItem = {
   revenue?: number;
 };
 
-export type VendorOrderStatus = "pending" | "preparing" | "delivered" | "cancelled";
+/** @see OrderStatus — pending → accepted → ready → assigned → in_transit → delivered (+ optional cancelled). */
 
 export type VendorOrderRow = {
   id: string;
@@ -22,6 +26,10 @@ export type VendorOrderRow = {
   createdAt: string;
   storeId?: string;
   storeName?: string;
+  /** Copied from store when the order was created. */
+  assignmentMode?: "auto" | "manual";
+  referenceCode?: string;
+  riderId?: string;
 };
 
 export type VendorMonthlyPoint = {

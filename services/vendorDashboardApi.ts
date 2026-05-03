@@ -33,6 +33,14 @@ function num(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+const MAX_LIST_LIMIT = 20;
+
+function clampListLimit(limit: number | undefined, fallback = MAX_LIST_LIMIT): number {
+  const n = typeof limit === "number" ? limit : Number(limit);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(MAX_LIST_LIMIT, Math.floor(n));
+}
+
 function normalizeProduct(raw: Record<string, unknown>): VendorDashboardProduct {
   return {
     id: String(raw.id ?? ""),
@@ -253,27 +261,48 @@ export type VendorProductsQuery = {
 
 export type VendorProductsPage = {
   items: VendorDashboardProduct[];
-  nextCursor: string | null;
+  meta: {
+    limit: number;
+    nextCursor: string | null;
+    hasMore: boolean;
+  };
 };
 
 export async function getVendorProducts(q: VendorProductsQuery = {}): Promise<VendorProductsPage> {
+  const limit = clampListLimit(q.limit);
   const { data } = await http.get<Record<string, unknown>>("/vendor/products", {
     params: {
       storeId: q.storeId,
       search: q.search,
       category: q.category,
       inStock: q.inStock,
-      limit: q.limit,
+      limit,
       cursor: q.cursor,
     },
   });
   const body = unwrapData(data);
   const itemsRaw = (body.items ?? body.data ?? []) as Record<string, unknown>[];
-  const nextCursor =
-    (body.nextCursor ?? body.next_cursor ?? null) as string | null | undefined;
+  const metaRaw =
+    body.meta && typeof body.meta === "object" && !Array.isArray(body.meta)
+      ? (body.meta as Record<string, unknown>)
+      : {};
+  const nextCursor = (metaRaw.nextCursor ?? metaRaw.next_cursor ?? body.nextCursor ?? body.next_cursor ?? null) as
+    | string
+    | null
+    | undefined;
+  const limitRaw = metaRaw.limit ?? body.limit ?? limit;
+  const limitNum = typeof limitRaw === "number" ? limitRaw : Number(limitRaw);
+  const hasMoreRaw = metaRaw.hasMore ?? metaRaw.has_more;
   return {
     items: itemsRaw.map((row) => normalizeProduct(row)),
-    nextCursor: nextCursor ?? null,
+    meta: {
+      limit: Number.isFinite(limitNum) && limitNum > 0 ? Math.min(MAX_LIST_LIMIT, limitNum) : MAX_LIST_LIMIT,
+      nextCursor: nextCursor ?? null,
+      hasMore:
+        typeof hasMoreRaw === "boolean"
+          ? hasMoreRaw
+          : Boolean(nextCursor && String(nextCursor).trim() !== ""),
+    },
   };
 }
 

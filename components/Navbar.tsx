@@ -93,6 +93,14 @@ export const Navbar = () => {
               >
                 Orders
               </Link>
+              {user?.role === "customer" ? (
+                <Link
+                  href="/wallet"
+                  className="text-sm font-semibold text-[#1a1a1a] transition hover:text-[#00A082]"
+                >
+                  Wallet
+                </Link>
+              ) : null}
             </div>
 
             <div className="relative z-[2] flex min-h-11 shrink-0 items-center gap-2 md:gap-3">
@@ -121,12 +129,33 @@ export const Navbar = () => {
                     <Link href="/orders/history" className="block px-4 py-3 text-sm hover:bg-background">
                       📋 Order History
                     </Link>
+                    {user.role === "customer" ? (
+                      <Link href="/wallet" className="block px-4 py-3 text-sm hover:bg-background">
+                        💳 Wallet
+                      </Link>
+                    ) : null}
+                    {user.role === "rider" && (
+                      <Link
+                        href="/rider/dashboard"
+                        className="block px-4 py-3 text-sm hover:bg-background"
+                      >
+                        🛵 Rider dashboard
+                      </Link>
+                    )}
                     {user.role === "vendor" && (
                       <Link
                         href="/vendor/dashboard"
                         className="block px-4 py-3 text-sm hover:bg-background"
                       >
                         🏪 Vendor dashboard
+                      </Link>
+                    )}
+                    {user.role === "store_manager" && (
+                      <Link
+                        href="/dashboard"
+                        className="block px-4 py-3 text-sm hover:bg-background"
+                      >
+                        🏬 Store dashboard
                       </Link>
                     )}
                     <button
@@ -167,10 +196,41 @@ export const Navbar = () => {
               <Link href="/orders/history" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5">
                 Orders
               </Link>
-              {user && (
-                <Link href="/profile" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5">
-                  Profile
+              {user?.role === "customer" ? (
+                <Link href="/wallet" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5">
+                  Wallet
                 </Link>
+              ) : null}
+              {user && (
+                <>
+                  <Link href="/profile" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5">
+                    Profile
+                  </Link>
+                  {user.role === "rider" && (
+                    <Link
+                      href="/rider/dashboard"
+                      className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5"
+                    >
+                      Rider dashboard
+                    </Link>
+                  )}
+                  {user.role === "vendor" && (
+                    <Link
+                      href="/vendor/dashboard"
+                      className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5"
+                    >
+                      Vendor dashboard
+                    </Link>
+                  )}
+                  {user.role === "store_manager" && (
+                    <Link
+                      href="/dashboard"
+                      className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-black/5"
+                    >
+                      Store dashboard
+                    </Link>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -210,6 +270,11 @@ export const Navbar = () => {
             <Link href="/orders/history" className="text-sm font-medium text-foreground transition hover:text-brand">
               Orders
             </Link>
+            {user?.role === "customer" ? (
+              <Link href="/wallet" className="text-sm font-medium text-foreground transition hover:text-brand">
+                Wallet
+              </Link>
+            ) : null}
           </div>
 
           <div className="hidden lg:block">
@@ -244,12 +309,33 @@ export const Navbar = () => {
                   <Link href="/orders/history" className="block px-4 py-3 text-sm hover:bg-background">
                     📋 Order History
                   </Link>
+                  {user.role === "customer" ? (
+                    <Link href="/wallet" className="block px-4 py-3 text-sm hover:bg-background">
+                      💳 Wallet
+                    </Link>
+                  ) : null}
+                  {user.role === "rider" && (
+                    <Link
+                      href="/rider/dashboard"
+                      className="block px-4 py-3 text-sm hover:bg-background"
+                    >
+                      🛵 Rider dashboard
+                    </Link>
+                  )}
                   {user.role === "vendor" && (
                     <Link
                       href="/vendor/dashboard"
                       className="block px-4 py-3 text-sm hover:bg-background"
                     >
                       🏪 Vendor dashboard
+                    </Link>
+                  )}
+                  {user.role === "store_manager" && (
+                    <Link
+                      href="/dashboard"
+                      className="block px-4 py-3 text-sm hover:bg-background"
+                    >
+                      🏬 Store dashboard
                     </Link>
                   )}
                   <button
@@ -289,10 +375,41 @@ export const Navbar = () => {
             <Link href="/orders/history" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background">
               Orders
             </Link>
-            {user && (
-              <Link href="/profile" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background">
-                Profile
+            {user?.role === "customer" ? (
+              <Link href="/wallet" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background">
+                Wallet
               </Link>
+            ) : null}
+            {user && (
+              <>
+                <Link href="/profile" className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background">
+                  Profile
+                </Link>
+                {user.role === "rider" && (
+                  <Link
+                    href="/rider/dashboard"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background"
+                  >
+                    Rider dashboard
+                  </Link>
+                )}
+                {user.role === "vendor" && (
+                  <Link
+                    href="/vendor/dashboard"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background"
+                  >
+                    Vendor dashboard
+                  </Link>
+                )}
+                {user.role === "store_manager" && (
+                  <Link
+                    href="/dashboard"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-background"
+                  >
+                    Store dashboard
+                  </Link>
+                )}
+              </>
             )}
             <div className="px-3 pt-2">
               <LocationSelector />

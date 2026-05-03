@@ -46,13 +46,13 @@ export default function DashboardStoreProductsPage() {
     queryFn: ({ pageParam }) =>
       getVendorProducts({
         storeId,
-        limit: 30,
+        limit: 20,
         cursor: pageParam,
         search: search.trim() || undefined,
         category: category.trim() || undefined,
         inStock: inStockOnly,
       }),
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
     enabled: canView && !permLoading,
   });

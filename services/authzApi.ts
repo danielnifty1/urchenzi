@@ -82,6 +82,13 @@ function permissionsForPlatformRole(platformUserRole?: string): MyStorePermissio
       isSuperAdmin: false,
     };
   }
+  if (platformUserRole === "store_manager") {
+    return {
+      permissions: [...FALLBACK_PERMISSIONS_BY_ROLE.store_manager],
+      roles: ["store_manager"],
+      isSuperAdmin: false,
+    };
+  }
   return null;
 }
 

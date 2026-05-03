@@ -5,6 +5,7 @@ const friendlyByCode: Record<string, string> = {
   ACCOUNT_BANNED: "This account is banned.",
   ASSIGNMENT_EXISTS: "This role is already assigned for that user and scope.",
   ROLE_ALREADY_ASSIGNED: "This role is already assigned for that user and scope.",
+  RIDER_KYC_INCOMPLETE: "All four KYC document URLs are required before approval.",
 };
 
 /** Surfaces Nest-style `{ message, code, errors }` for admin UI. */

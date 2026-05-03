@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { getApiErrorMessage, isProfileIncompleteError } from "@/lib/auth/apiErrors";
 import { isProfileComplete, profileCompletionPath } from "@/lib/auth/profileComplete";
+import { GoogleAddressField } from "@/components/forms/GoogleAddressField";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
 import { me, refreshSession } from "@/services/authApi";
 import { imagePayloadFromFile } from "@/lib/api/imagePayload";
@@ -20,6 +21,7 @@ import {
   type VendorOnboardingDocument,
   type VendorOnboardingDocumentType,
 } from "@/services/vendorOnboardingApi";
+import { listPaymentBanks, resolveBankAccount } from "@/services/paymentApi";
 import { useUserStore } from "@/store/userStore";
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -57,6 +59,7 @@ function formToPatch(form: {
   bankAccount: string;
   accountHolder: string;
   bankName: string;
+    bankCode: string;
   serviceArea: string[];
 }) {
   return {
@@ -80,6 +83,7 @@ export default function VendorOnboardingPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resolvingAccountName, setResolvingAccountName] = useState(false);
   const [formData, setFormData] = useState({
     businessName: "",
     address: "",
@@ -91,6 +95,7 @@ export default function VendorOnboardingPage() {
     bankAccount: "",
     accountHolder: "",
     bankName: "",
+    bankCode: "",
     serviceArea: [] as string[],
   });
 
@@ -106,6 +111,10 @@ export default function VendorOnboardingPage() {
       return raw;
     },
     enabled: !!user && user.role === "vendor" && isProfileComplete(user),
+  });
+  const banksQ = useQuery({
+    queryKey: ["payment-banks"],
+    queryFn: ({ signal }) => listPaymentBanks(signal),
   });
 
   useEffect(() => {
@@ -147,10 +156,17 @@ export default function VendorOnboardingPage() {
       bankAccount: "",
       accountHolder: onboarding.accountHolder ?? "",
       bankName: onboarding.bankName ?? "",
+      bankCode: "",
       serviceArea: onboarding.serviceAreas ?? [],
     });
     setHydrated(true);
   }, [onboarding, hydrated]);
+  useEffect(() => {
+    if (!formData.bankName || formData.bankCode || !banksQ.data?.length) return;
+    const selected = banksQ.data.find((b) => b.name === formData.bankName);
+    if (!selected) return;
+    setFormData((prev) => ({ ...prev, bankCode: selected.code }));
+  }, [banksQ.data, formData.bankName, formData.bankCode]);
 
   const docForType = useCallback(
     (type: string): VendorOnboardingDocument | undefined =>
@@ -161,7 +177,6 @@ export default function VendorOnboardingPage() {
   /** Skip POST /vendors/onboard when server already returned registration fields from GET. */
   const hasServerVendorRegistration =
     Boolean(onboarding?.businessName?.trim()) && Boolean(onboarding?.address?.trim());
-
   const handleComplete = async () => {
     setSaving(true);
     try {
@@ -178,6 +193,29 @@ export default function VendorOnboardingPage() {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    const accountNumber = formData.bankAccount.replace(/\D/g, "");
+    if (!formData.bankCode || accountNumber.length < 10) {
+      setFormData((prev) => ({ ...prev, accountHolder: "" }));
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setResolvingAccountName(true);
+      setFormData((prev) => ({ ...prev, accountHolder: "" }));
+      try {
+        const resolved = await resolveBankAccount(accountNumber, formData.bankCode);
+        if (resolved.accountName) {
+          setFormData((prev) => ({ ...prev, accountHolder: resolved.accountName }));
+        }
+      } catch (err) {
+        toast.error(getApiErrorMessage(err));
+      } finally {
+        setResolvingAccountName(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [formData.bankAccount, formData.bankCode]);
 
   const goNext = async () => {
     if (currentStep === 1) {
@@ -222,6 +260,16 @@ export default function VendorOnboardingPage() {
 
     if (currentStep === 2 && !formData.storeName.trim()) {
       toast.error("Please enter a store display name");
+      return;
+    }
+    if (
+      currentStep === 4 &&
+      (!formData.bankName.trim() ||
+        !formData.bankCode.trim() ||
+        formData.bankAccount.replace(/\D/g, "").length < 10 ||
+        !formData.accountHolder.trim())
+    ) {
+      toast.error("Select a bank and enter a valid account number to resolve account name.");
       return;
     }
 
@@ -376,13 +424,14 @@ export default function VendorOnboardingPage() {
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-foreground">Business address</label>
-              <textarea
-                placeholder="Street, city (5–1000 characters)"
+              <label className="mb-2 block text-sm font-semibold text-foreground" htmlFor="vendor-onboard-address">
+                Business address
+              </label>
+              <GoogleAddressField
+                id="vendor-onboard-address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                rows={4}
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                onChange={(address) => setFormData({ ...formData, address })}
+                placeholder="Search for a street address"
               />
             </div>
             <div>
@@ -601,23 +650,43 @@ export default function VendorOnboardingPage() {
           <div className="space-y-4">
             <div>
               <label className="mb-2 block text-sm font-semibold text-foreground">Bank Name</label>
-              <input
-                type="text"
-                placeholder="e.g., Standard Bank"
+              <select
                 value={formData.bankName}
-                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                onChange={(e) => {
+                  const selected = banksQ.data?.find((b) => b.name === e.target.value);
+                  setFormData({
+                    ...formData,
+                    bankName: e.target.value,
+                    bankCode: selected?.code ?? "",
+                  });
+                }}
                 className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20"
-              />
+              >
+                <option value="">
+                  {banksQ.isLoading ? "Loading banks..." : "Select bank"}
+                </option>
+                {(banksQ.data ?? []).map((bank) => (
+                  <option key={`${bank.code}-${bank.name}-${bank.id}`} value={bank.name}>
+                    {bank.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-foreground">
-                Account Holder Name
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <span>Account Holder Name</span>
+                {resolvingAccountName ? (
+                  <span
+                    className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#00A082] border-t-transparent"
+                    aria-label="Resolving account name"
+                  />
+                ) : null}
               </label>
               <input
                 type="text"
-                placeholder="Your name on the account"
+                placeholder={resolvingAccountName ? "Resolving account name..." : "Auto-resolved from account number"}
                 value={formData.accountHolder}
-                onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
+                readOnly
                 className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
@@ -633,7 +702,13 @@ export default function VendorOnboardingPage() {
                     : "Your bank account number"
                 }
                 value={formData.bankAccount}
-                onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankAccount: e.target.value.replace(/\D/g, "").slice(0, 10),
+                  })
+                }
+                maxLength={10}
                 autoComplete="off"
                 className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground focus:border-brand focus:ring-2 focus:ring-brand/20"
               />

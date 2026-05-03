@@ -26,6 +26,7 @@ export function getPostAuthRedirectPath(session: UserSession): string {
   }
 
   if (role === "vendor") return "/vendor/dashboard";
+  if (role === "store_manager") return "/dashboard";
   if (role === "rider") return "/rider/dashboard";
   if (role === "customer") return "/";
 

@@ -1,6 +1,8 @@
 import { http } from "@/lib/api/client";
 import axios from "axios";
+import { fetchStoreManagerStores } from "@/services/storeManagerApi";
 import { listMyStores, vendorStoreEntityToAccessibleRow } from "@/services/vendorStoresApi";
+import { useUserStore } from "@/store/userStore";
 import type { VendorStoreListItem, VendorStoreStatus } from "@/types/vendorMultiStore";
 
 export type AccessibleStoreRow = VendorStoreListItem;
@@ -13,9 +15,16 @@ function unwrap<T>(data: unknown): T {
 }
 
 /**
- * Primary: GET /stores (vendor JWT). Fallback: legacy me/stores paths, then dev env UUID.
+ * **Vendor:** GET /stores (vendor JWT).
+ * **Store manager:** GET /store-manager/stores — do not use vendor listing (403 on /stores).
+ * Fallback: legacy me/stores paths, then dev env UUID.
  */
 export async function fetchMyAccessibleStores(): Promise<AccessibleStoreRow[]> {
+  const role = useUserStore.getState().user?.role;
+  if (role === "store_manager") {
+    return fetchStoreManagerStores();
+  }
+
   try {
     const entities = await listMyStores();
     return entities.map(vendorStoreEntityToAccessibleRow);

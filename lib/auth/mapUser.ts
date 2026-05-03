@@ -2,7 +2,9 @@ import type { ApiAuthUser, UserRole, UserSession, UserStatus } from "@/types";
 
 function toRole(value: string): UserRole | undefined {
   const v = value.toLowerCase();
-  if (v === "customer" || v === "vendor" || v === "rider" || v === "admin") return v;
+  if (v === "customer" || v === "vendor" || v === "rider" || v === "admin" || v === "store_manager") {
+    return v as UserRole;
+  }
   return undefined;
 }
 
@@ -20,6 +22,7 @@ function toEmailVerified(u: ApiAuthUser): boolean | undefined {
     u.email_verified ??
     u.isEmailVerified ??
     u.is_email_verified ??
+    u.isEmailVerifed ??
     u.verified;
   if (raw === true || raw === false) return raw;
   return undefined;
