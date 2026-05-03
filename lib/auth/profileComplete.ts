@@ -23,6 +23,6 @@ export function profileCompletionPath(nextPath: string, intendedRole?: UserRole)
 export function parseUserRoleQueryParam(value: string | null): UserRole | undefined {
   if (!value) return undefined;
   const v = value.toLowerCase();
-  if (v === "customer" || v === "vendor" || v === "rider") return v;
+  if (v === "customer" || v === "vendor" || v === "rider" || v === "store_manager") return v;
   return undefined;
 }

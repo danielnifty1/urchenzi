@@ -18,6 +18,11 @@ function ProfileCompletionInner() {
   const nextRaw = searchParams.get("next") ?? "/onboarding/select-role";
   const roleForPayload =
     parseUserRoleQueryParam(searchParams.get("role")) ?? user?.role ?? "customer";
+
+  const profileBlurb =
+    roleForPayload === "store_manager"
+      ? "Add your name, phone, and address so you can use the vendor dashboard for the store you were invited to. This is required by the server."
+      : "Add your first name, last name, phone, and address before vendor or rider onboarding. This matches customer onboarding and is required by the server.";
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -75,10 +80,7 @@ function ProfileCompletionInner() {
       <div className="mx-auto max-w-lg space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Complete your profile</h1>
-          <p className="mt-2 text-muted">
-            Add your first name, last name, phone, and address before vendor or rider onboarding.
-            This matches customer onboarding and is required by the server.
-          </p>
+          <p className="mt-2 text-muted">{profileBlurb}</p>
         </div>
 
         <form

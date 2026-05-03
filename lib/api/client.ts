@@ -17,7 +17,7 @@ export const http = axios.create({
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   config.baseURL = getApiV1Base();
   const token = getAccessToken();
-  if (token) {
+  if (token && !config.skipAuth) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   const storeId = getActiveStoreId();

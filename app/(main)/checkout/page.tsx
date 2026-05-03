@@ -1,77 +1,127 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { useCreateOrder } from "@/hooks/useMarketplace";
+import { useMutation } from "@tanstack/react-query";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
+import { isProfileComplete, profileCompletionPath } from "@/lib/auth/profileComplete";
+import { createCustomerOrder } from "@/services/customerOrdersApi";
 import { useCartStore } from "@/store/cartStore";
-import { Order } from "@/types";
+import { useLocationStore } from "@/store/locationStore";
+import { useUserStore } from "@/store/userStore";
 import { formatCurrency } from "@/utils/format";
-import { savedAddresses } from "@/services/mockData";
-
-const statuses: Order["status"][] = [
-  "Pending",
-  "Accepted",
-  "Rider Assigned",
-  "On the way",
-  "Delivered",
-];
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const user = useUserStore((s) => s.user);
+  const authResolved = useUserStore((s) => s.authResolved);
   const items = useCartStore((state) => state.items);
   const subtotal = useCartStore((state) => state.subtotal());
   const clearCart = useCartStore((state) => state.clearCart);
-  const [address, setAddress] = useState(savedAddresses[0]?.address || "");
+  /** Same selection as Navbar `LocationSelector` (persisted). */
+  const selectedAddress = useLocationStore((s) => s.selectedAddress);
   const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Card">("Cash");
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
-  const createOrder = useCreateOrder();
 
+  /** Display only — server computes fees on POST /customers/orders. */
   const deliveryFee = 2.5;
-  const discount = appliedPromo ? subtotal * 0.1 : 0;
-  const total = subtotal + deliveryFee - discount;
+  const total = subtotal + deliveryFee;
+
+  const placeOrderMut = useMutation({
+    mutationFn: createCustomerOrder,
+    onSuccess: (order) => {
+      clearCart();
+      const ref = order.displayRef || order.id;
+      toast.success("Order placed successfully!");
+      router.push(`/order/${encodeURIComponent(ref)}`);
+    },
+    onError: (e) => toast.error(getApiErrorMessage(e)),
+  });
+
+  useEffect(() => {
+    if (!authResolved) return;
+    if (!user) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/checkout")}`);
+      return;
+    }
+    if (user.role && user.role !== "customer") {
+      return;
+    }
+    if (!isProfileComplete(user)) {
+      router.replace(profileCompletionPath("/checkout", "customer"));
+    }
+  }, [authResolved, user, router]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!address.trim() || items.length === 0) {
+    if (!user) {
+      toast.error("Please sign in to place an order.");
+      return;
+    }
+    if (user.role && user.role !== "customer") {
+      toast.error("Checkout is only available for customer accounts.");
+      return;
+    }
+    if (!isProfileComplete(user)) {
+      router.replace(profileCompletionPath("/checkout", "customer"));
+      return;
+    }
+    if (!selectedAddress.address.trim() || items.length === 0) {
       toast.error("Please select address and add cart items.");
       return;
     }
 
-    const orderId = `ord-${Date.now()}`;
-    const order: Order = {
-      id: orderId,
-      items,
-      total,
-      status: statuses[0],
-      address,
-      paymentMethod,
-      createdAt: new Date().toISOString(),
-      rider: {
-        name: "Ali Musa",
-        phone: "+1 202 555 0125",
-        vehicle: "Motorbike",
-      },
-    };
+    const storeId = items[0]?.vendorId?.trim();
+    if (!storeId) {
+      toast.error("Missing store — add items from a store and try again.");
+      return;
+    }
 
-    await createOrder.mutateAsync(order);
-    clearCart();
-    toast.success("Order placed successfully!");
-    router.push(`/order/${orderId}`);
+    placeOrderMut.mutate({
+      storeId,
+      items: items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+      })),
+      address: {
+        label: selectedAddress.label,
+        line: selectedAddress.address.trim(),
+      },
+      paymentMethod: paymentMethod === "Cash" ? "cash" : "card",
+    });
   };
+
+  if (!authResolved) {
+    return (
+      <div className="py-16 text-center text-sm text-muted">Loading…</div>
+    );
+  }
+
+  if (user && user.role && user.role !== "customer") {
+    return (
+      <div className="space-y-6 py-12 text-center">
+        <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
+        <p className="text-muted">Customer checkout isn&apos;t available for this account type.</p>
+        <Link href="/" className="inline-block rounded-lg bg-brand px-6 py-3 font-semibold text-white">
+          Back to home
+        </Link>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
-      <div className="space-y-6 text-center py-12">
+      <div className="space-y-6 py-12 text-center">
         <div className="text-5xl">🛒</div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Cart is Empty</h1>
-          <p className="text-muted mb-6">Add items from vendors to get started</p>
+          <h1 className="mb-2 text-2xl font-bold text-foreground">Cart is Empty</h1>
+          <p className="mb-6 text-muted">Add items from vendors to get started</p>
           <Link
             href="/"
-            className="inline-block rounded-lg bg-brand px-6 py-3 font-semibold text-white hover:bg-brand-dark transition"
+            className="inline-block rounded-lg bg-brand px-6 py-3 font-semibold text-white transition hover:bg-brand-dark"
           >
             Continue Shopping
           </Link>
@@ -83,41 +133,34 @@ export default function CheckoutPage() {
   return (
     <div className="space-y-8">
       <div className="rounded-3xl bg-brand p-8 text-white">
-        <h1 className="text-4xl font-bold mb-2">Order Summary</h1>
+        <h1 className="mb-2 text-4xl font-bold">Order Summary</h1>
         <p className="text-white/80">Review and complete your order</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-2xl bg-surface p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">📍 Delivery Address</h2>
-            <div className="space-y-3">
-              {savedAddresses.map((addr) => (
-                <button
-                  key={addr.id}
-                  onClick={() => setAddress(addr.address)}
-                  className={`w-full text-left rounded-lg p-4 border-2 transition ${
-                    address === addr.address
-                      ? "border-brand bg-brand/5"
-                      : "border-border hover:border-brand"
-                  }`}
-                >
-                  <div className="font-semibold text-foreground">{addr.label}</div>
-                  <div className="text-sm text-muted">{addr.address}</div>
-                </button>
-              ))}
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-2xl border border-border bg-surface p-6">
+            <h2 className="mb-2 text-xl font-bold text-foreground">📍 Delivery address</h2>
+            <p className="mb-4 text-sm text-muted">
+              Orders are sent to the address you select in the <strong className="text-foreground">navbar</strong>{" "}
+              (📍 location). Change it there anytime before you place the order.
+            </p>
+            <div className="rounded-xl border border-border bg-background/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Deliver to</p>
+              <p className="mt-1 font-semibold text-foreground">{selectedAddress.label}</p>
+              <p className="mt-0.5 text-sm text-muted">{selectedAddress.address}</p>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">💳 Payment Method</h2>
+          <div className="rounded-2xl border border-border bg-surface p-6">
+            <h2 className="mb-4 text-xl font-bold text-foreground">💳 Payment Method</h2>
             <div className="grid grid-cols-2 gap-3">
               {(["Cash", "Card"] as const).map((method) => (
                 <button
                   type="button"
                   key={method}
                   onClick={() => setPaymentMethod(method)}
-                  className={`rounded-lg p-3 border-2 font-semibold transition ${
+                  className={`rounded-lg border-2 p-3 font-semibold transition ${
                     paymentMethod === method
                       ? "border-brand bg-brand/5 text-brand"
                       : "border-border text-foreground hover:border-brand"
@@ -129,8 +172,8 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">🎟️ Promo Code</h2>
+          <div className="rounded-2xl border border-border bg-surface p-6">
+            <h2 className="mb-4 text-xl font-bold text-foreground">🎟️ Promo Code</h2>
             <div className="flex gap-3">
               <input
                 value={promoCode}
@@ -141,22 +184,22 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setAppliedPromo(promoCode || null)}
-                className="rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark transition"
+                className="rounded-lg bg-brand px-4 py-2 font-semibold text-white transition hover:bg-brand-dark"
               >
                 Apply
               </button>
             </div>
             {appliedPromo && (
-              <p className="text-sm text-success font-semibold mt-2">✓ Promo applied: {appliedPromo}</p>
+              <p className="mt-2 text-sm font-semibold text-success">✓ Promo applied: {appliedPromo}</p>
             )}
           </div>
         </div>
 
-        <div className="rounded-2xl bg-surface p-6 border border-border h-fit sticky top-24">
-          <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
-          <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+        <div className="sticky top-24 h-fit rounded-2xl border border-border bg-surface p-6">
+          <h2 className="mb-4 text-xl font-bold text-foreground">Order Items</h2>
+          <div className="mb-4 max-h-96 space-y-3 overflow-y-auto">
             {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm pb-2 border-b border-border">
+              <div key={item.id} className="flex justify-between border-b border-border pb-2 text-sm">
                 <div>
                   <p className="font-medium text-foreground">{item.name}</p>
                   <p className="text-xs text-muted">x{item.quantity}</p>
@@ -177,29 +220,27 @@ export default function CheckoutPage() {
               <span className="text-muted">Delivery fee</span>
               <span className="font-medium">{formatCurrency(deliveryFee)}</span>
             </div>
-            {discount > 0 && (
-              <div className="flex justify-between text-sm text-success">
-                <span className="font-medium">Discount ({appliedPromo})</span>
-                <span className="font-medium">-{formatCurrency(discount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
+            {appliedPromo ? (
+              <p className="text-xs text-muted">Promo &quot;{appliedPromo}&quot; — applied when supported by checkout API.</p>
+            ) : null}
+            <div className="flex justify-between border-t border-border pt-2 text-lg font-bold">
               <span>Total</span>
               <span className="text-brand">{formatCurrency(total)}</span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onSubmit}
-            disabled={createOrder.isPending}
-            className="w-full mt-6 rounded-lg bg-brand px-4 py-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50 transition"
+            disabled={placeOrderMut.isPending}
+            className="mt-6 w-full rounded-lg bg-brand px-4 py-3 font-bold text-white transition hover:bg-brand-dark disabled:opacity-50"
           >
-            {createOrder.isPending ? "Processing..." : "Place Order"}
+            {placeOrderMut.isPending ? "Placing order…" : "Place order"}
           </button>
 
           <Link
             href="/cart"
-            className="block w-full mt-3 rounded-lg border-2 border-border px-4 py-3 text-center font-semibold text-foreground hover:border-brand hover:bg-brand/5 transition"
+            className="mt-3 block w-full rounded-lg border-2 border-border px-4 py-3 text-center font-semibold text-foreground transition hover:border-brand hover:bg-brand/5"
           >
             Back to Cart
           </Link>

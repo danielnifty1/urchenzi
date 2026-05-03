@@ -74,3 +74,40 @@ a {
   background: color-mix(in srgb, var(--accent) 35%, white);
   color: var(--foreground);
 }
+
+/* Payment callback page — used with Tailwind arbitrary `animate-[...]` */
+@keyframes payment-callback-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes payment-callback-shimmer {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(220%);
+    opacity: 0;
+  }
+}
+
+@keyframes payment-callback-scale-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

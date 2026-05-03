@@ -1,20 +1,123 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
+import { imagePayloadFromFile } from "@/lib/api/imagePayload";
+import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { isProfileComplete, profileCompletionPath } from "@/lib/auth/profileComplete";
+import { me, refreshSession } from "@/services/authApi";
+import {
+  mapVehicleFormToRiderVehicleType,
+  postRidersOnboard,
+  uploadRiderOnboardingDocument,
+  type RiderDocumentType,
+} from "@/services/riderApi";
 import { useUserStore } from "@/store/userStore";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
+const RIDER_DOC_ROWS: { label: string; type: RiderDocumentType }[] = [
+  { label: "Driver's License", type: "drivers_license" },
+  { label: "Vehicle Registration", type: "vehicle_registration" },
+  { label: "Insurance Document", type: "insurance" },
+  { label: "Proof of Address", type: "proof_of_address" },
+];
+
+function RiderDocumentsStep() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingTypeRef = useRef<RiderDocumentType | null>(null);
+  const [status, setStatus] = useState<Partial<Record<RiderDocumentType, "uploading" | "done">>>({});
+  const [fileLabel, setFileLabel] = useState<Partial<Record<RiderDocumentType, string>>>({});
+
+  const openPicker = (type: RiderDocumentType) => {
+    pendingTypeRef.current = type;
+    inputRef.current?.click();
+  };
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const type = pendingTypeRef.current;
+    e.target.value = "";
+    if (!file || !type) return;
+
+    setStatus((s) => ({ ...s, [type]: "uploading" }));
+    try {
+      const image = await imagePayloadFromFile(file, type);
+      await uploadRiderOnboardingDocument(type, image);
+      setStatus((s) => ({ ...s, [type]: "done" }));
+      setFileLabel((s) => ({ ...s, [type]: file.name }));
+      toast.success("Document uploaded.");
+    } catch (err) {
+      setStatus((s) => {
+        const next = { ...s };
+        delete next[type];
+        return next;
+      });
+      toast.error(getApiErrorMessage(err));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        accept="image/*,.pdf,application/pdf"
+        onChange={(e) => void onFileChange(e)}
+      />
+      <div>
+        <h2 className="mb-2 text-2xl font-bold text-foreground">Upload Documents</h2>
+        <p className="text-muted">Required for verification</p>
+      </div>
+      <div className="space-y-3">
+        {RIDER_DOC_ROWS.map(({ label, type }) => {
+          const st = status[type];
+          const done = st === "done";
+          const uploading = st === "uploading";
+          return (
+            <div
+              key={type}
+              className="flex flex-col gap-2 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="font-semibold text-foreground">{label}</p>
+                <p className="text-xs text-muted">
+                  {done && fileLabel[type]
+                    ? `Uploaded: ${fileLabel[type]}`
+                    : "Required for verification"}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => openPicker(type)}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {uploading ? "Uploading…" : done ? "Replace" : "Upload"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+        <p className="text-sm font-semibold text-foreground">
+          Your documents are verified within 24 hours
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function RiderOnboardingPage() {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
-  const updateUserRole = useUserStore((state) => state.updateUserRole);
+  const login = useUserStore((state) => state.login);
 
   const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [onboardingBusy, setOnboardingBusy] = useState(false);
   const [formData, setFormData] = useState({
     vehicleType: "motorcycle",
     vehiclePlate: "",
@@ -48,28 +151,61 @@ export default function RiderOnboardingPage() {
     );
   }
 
+  const handleComplete = async () => {
+    try {
+      const session = await refreshSession().catch(() => me());
+      login(session);
+      toast.success("Welcome to our rider network!");
+      router.push("/rider/dashboard");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    }
+  };
+
   const handleNext = () => {
-    if (currentStep === 2 && (!formData.vehiclePlate.trim() || !formData.licenseNumber.trim())) {
-      toast.error("Please fill in all vehicle information");
+    void handleNextAsync();
+  };
+
+  async function handleNextAsync() {
+    if (currentStep === 2) {
+      if (!formData.vehiclePlate.trim() || !formData.licenseNumber.trim()) {
+        toast.error("Please fill in all vehicle information");
+        return;
+      }
+      const phone = user?.phone?.trim();
+      if (!phone) {
+        toast.error("Add a phone number to your profile before continuing.");
+        return;
+      }
+      if (onboardingBusy) return;
+      setOnboardingBusy(true);
+      try {
+        await postRidersOnboard({
+          phone,
+          vehicleType: mapVehicleFormToRiderVehicleType(formData.vehicleType),
+          plateNumber: formData.vehiclePlate.trim(),
+        });
+        const session = await refreshSession();
+        login(session);
+        setCurrentStep(3);
+        toast.success("Rider profile saved. Upload your documents next.");
+      } catch (e) {
+        toast.error(getApiErrorMessage(e));
+      } finally {
+        setOnboardingBusy(false);
+      }
+      return;
+    }
+
+    if (currentStep === 5) {
+      await handleComplete();
       return;
     }
 
     if (currentStep < 5) {
       setCurrentStep((currentStep + 1) as Step);
-    } else {
-      handleComplete();
     }
-  };
-
-  const handleComplete = async () => {
-    try {
-      updateUserRole("rider", "active");
-      toast.success("Welcome to our rider network!");
-      router.push("/rider/dashboard");
-    } catch (err) {
-      toast.error("Failed to complete setup");
-    }
-  };
+  }
 
   const steps = [
     {
@@ -174,42 +310,7 @@ export default function RiderOnboardingPage() {
     },
     {
       title: "Documents & Verification",
-      render: (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Upload Documents
-            </h2>
-            <p className="text-muted">Required for verification</p>
-          </div>
-          <div className="space-y-3">
-            {[
-              "Driver's License",
-              "Vehicle Registration",
-              "Insurance Document",
-              "Proof of Address",
-            ].map((doc) => (
-              <div
-                key={doc}
-                className="flex items-center justify-between rounded-lg border border-border p-4"
-              >
-                <div>
-                  <p className="font-semibold text-foreground">{doc}</p>
-                  <p className="text-xs text-muted">Required for verification</p>
-                </div>
-                <button className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
-                  Upload
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
-            <p className="text-sm font-semibold text-foreground">
-              Your documents are verified within 24 hours
-            </p>
-          </div>
-        </div>
-      ),
+      render: <RiderDocumentsStep />,
     },
     {
       title: "Banking & Service Areas",
@@ -362,7 +463,8 @@ export default function RiderOnboardingPage() {
       stepName={steps[currentStep - 1].title}
       onBack={currentStep > 1 ? () => setCurrentStep((currentStep - 1) as Step) : undefined}
       onNext={handleNext}
-      nextLabel={currentStep === 5 ? "Go to Dashboard" : "Continue"}
+      nextDisabled={onboardingBusy}
+      nextLabel={currentStep === 5 ? "Go to Dashboard" : onboardingBusy ? "Saving…" : "Continue"}
     >
       {steps[currentStep - 1].render}
     </OnboardingLayout>

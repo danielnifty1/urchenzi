@@ -7,6 +7,10 @@ export type VendorStoreEntity = {
   vendorId: string;
   name: string;
   address: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankCode?: string | null;
   image: string | null;
   status: VendorApiStoreStatus;
   slug: string | null;
@@ -24,6 +28,10 @@ export type StoreImageInput = {
 export type CreateStoreBody = {
   name: string;
   address: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankCode?: string;
   status?: VendorApiStoreStatus;
   image?: string | StoreImageInput;
   slug?: string;
@@ -32,6 +40,10 @@ export type CreateStoreBody = {
 export type PatchStoreBody = Partial<{
   name: string;
   address: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankCode: string | null;
   status: VendorApiStoreStatus;
   image: string | null;
   slug: string | null;

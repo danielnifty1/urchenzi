@@ -38,6 +38,15 @@ function normalizeEntity(raw: unknown): VendorStoreEntity | null {
     vendorId: vendorId != null ? String(vendorId) : "",
     name: String(r.name ?? "Store"),
     address: String(r.address ?? ""),
+    bankName: String(r.bankName ?? r.bank_name ?? ""),
+    bankAccountName: String(r.bankAccountName ?? r.bank_account_name ?? ""),
+    bankAccountNumber: String(r.bankAccountNumber ?? r.bank_account_number ?? ""),
+    bankCode:
+      r.bankCode != null
+        ? String(r.bankCode)
+        : r.bank_code != null
+          ? String(r.bank_code)
+          : null,
     image,
     status: normalizeApiStatus(r.status),
     slug: r.slug != null && String(r.slug) !== "" ? String(r.slug) : null,

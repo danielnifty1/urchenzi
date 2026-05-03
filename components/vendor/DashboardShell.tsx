@@ -13,6 +13,7 @@ import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 const NAV = [
   { href: "/vendor/dashboard", label: "Overview", icon: "📊" },
   { href: "/dashboard", label: "All stores", icon: "🏪" },
+  { href: "/vendor/dashboard/finance", label: "Finance", icon: "💰" },
   { href: "/vendor/dashboard/products", label: "Products", icon: "🍽️" },
   { href: "/vendor/dashboard/features", label: "Features", icon: "⚡" },
   { href: "/vendor/dashboard/settings", label: "Store settings", icon: "⚙️" },
@@ -90,7 +91,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         />
       ) : null}
 
-      <div className="flex min-h-0 w-full flex-1">
+      <div className="flex min-h-0 w-full flex-1 lg:gap-4 lg:px-4">
       <aside
         className={clsx(
           "fixed inset-y-0 left-0 z-50 flex w-[min(17rem,88vw)] flex-col border-r border-white/10 bg-[#0b0f14] shadow-2xl shadow-black/40 transition-transform duration-200 ease-out lg:static lg:z-0 lg:w-64 lg:translate-x-0 lg:shadow-none",

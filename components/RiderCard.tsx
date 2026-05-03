@@ -28,9 +28,14 @@ export const RiderCard = ({ rider }: RiderCardProps) => {
           </div>
         </div>
 
-        <button className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark transition">
-          Call
-        </button>
+        {rider.phone && rider.phone !== "—" ? (
+          <a
+            href={`tel:${rider.phone.replace(/\s/g, "")}`}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark"
+          >
+            Call
+          </a>
+        ) : null}
       </div>
     </div>
   );

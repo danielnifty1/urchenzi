@@ -4,10 +4,15 @@ import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { DashboardBarChart } from "@/components/dashboard/charts/DashboardBarChart";
+import { DashboardLineChart } from "@/components/dashboard/charts/DashboardLineChart";
+import { StatsCard } from "@/components/dashboard/StatsCard";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { fetchMyAccessibleStores } from "@/services/storeDirectoryApi";
+import { fetchVendorGlobalDashboard } from "@/services/vendorMultiStoreApi";
 import { getVendorDashboard } from "@/services/vendorDashboardApi";
 import { formatCurrency } from "@/utils/format";
+import clsx from "clsx";
 
 export default function VendorDashboardOverviewPage() {
   const searchParams = useSearchParams();
@@ -15,23 +20,34 @@ export default function VendorDashboardOverviewPage() {
   const storeIdFromQuery = (searchParams.get("storeId") ?? "").trim();
   const storeId = storeIdFromQuery || null;
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["vendor-dashboard", "overview", storeId ?? "none"],
-    queryFn: () => getVendorDashboard(storeId),
-  });
   const storesQ = useQuery({
     queryKey: ["vendor-dashboard", "stores", "overview"],
     queryFn: fetchMyAccessibleStores,
   });
+
   const stores = storesQ.data ?? [];
-  const message = getApiErrorMessage(error);
-  const needsStoreSelection =
-    isError &&
-    /multiple stores exist|pass storeid|query parameter/i.test(message);
   const activeStores = useMemo(
     () => stores.filter((s) => s.status === "active" || s.status === "pending"),
     [stores],
   );
+
+  const isMultiStoreOverview =
+    storesQ.isSuccess && !storeId && activeStores.length > 1;
+
+  const isWaitingSingleAutoSelect =
+    storesQ.isSuccess && !storeId && activeStores.length === 1;
+
+  const globalQ = useQuery({
+    queryKey: ["vendor-dashboard-global-overview"],
+    queryFn: () => fetchVendorGlobalDashboard(null),
+    enabled: isMultiStoreOverview,
+  });
+
+  const singleDashQ = useQuery({
+    queryKey: ["vendor-dashboard", "overview", storeId ?? "none"],
+    queryFn: () => getVendorDashboard(storeId!),
+    enabled: storesQ.isSuccess && Boolean(storeId) && !isMultiStoreOverview,
+  });
 
   useEffect(() => {
     if (storeId) return;
@@ -41,6 +57,199 @@ export default function VendorDashboardOverviewPage() {
     params.set("storeId", activeStores[0].id);
     router.replace(`/vendor/dashboard?${params.toString()}`);
   }, [activeStores, router, searchParams, storeId, storesQ.isSuccess]);
+
+  if (storesQ.isLoading) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-40 rounded-2xl bg-background" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 rounded-2xl bg-background" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (storesQ.isError) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-8 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
+        <p className="font-semibold">Could not load stores</p>
+        <p className="mt-2 text-sm opacity-90">{getApiErrorMessage(storesQ.error)}</p>
+      </div>
+    );
+  }
+
+  if (activeStores.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center shadow-sm">
+        <p className="font-semibold text-foreground">No stores yet</p>
+        <p className="mt-2 text-sm text-muted">Create a store from your onboarding flow or contact support.</p>
+        <Link
+          href="/dashboard/stores"
+          className="mt-6 inline-flex rounded-xl bg-[#00A082] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#00A082]/25"
+        >
+          Manage stores
+        </Link>
+      </div>
+    );
+  }
+
+  if (isWaitingSingleAutoSelect) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-40 rounded-2xl bg-background" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 rounded-2xl bg-background" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isMultiStoreOverview) {
+    if (globalQ.isLoading) {
+      return (
+        <div className="space-y-8 animate-pulse">
+          <div className="h-36 rounded-2xl bg-background" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-28 rounded-2xl bg-background" />
+            ))}
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="h-64 rounded-2xl bg-background" />
+            <div className="h-64 rounded-2xl bg-background" />
+          </div>
+        </div>
+      );
+    }
+
+    if (globalQ.isError || !globalQ.data) {
+      return (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-8 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
+          <p className="font-semibold">Could not load combined metrics</p>
+          <p className="mt-2 text-sm opacity-90">{getApiErrorMessage(globalQ.error)}</p>
+          <p className="mt-4 text-sm text-muted">
+            Pick a store from the header dropdown to open a single-store overview instead.
+          </p>
+        </div>
+      );
+    }
+
+    const g = globalQ.data;
+
+    return (
+      <div className="space-y-8">
+        <div className="rounded-2xl border border-border bg-gradient-to-br from-[#00A082]/12 via-surface to-surface p-6 shadow-sm md:p-8">
+          <p className="text-sm font-medium uppercase tracking-wide text-[#00A082]">Overview</p>
+          <h2 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">All your stores</h2>
+          <p className="mt-2 max-w-2xl text-muted">
+            Performance across {activeStores.length} locations. Use <strong className="text-foreground">Choose store</strong>{" "}
+            in the header to work on menu, features, or settings for one store.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {activeStores.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("storeId", s.id);
+                  router.replace(`/vendor/dashboard?${params.toString()}`);
+                }}
+                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-[#00A082]/50 hover:bg-background/80"
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-xl bg-[#0f1419] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-zinc-800 dark:bg-zinc-800"
+            >
+              Multi-store dashboard
+            </Link>
+            <Link
+              href="/dashboard/stores"
+              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-background/80"
+            >
+              Manage stores
+            </Link>
+          </div>
+        </div>
+
+      
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatsCard label="Total stores" value={g.totalStores} accent="emerald" variant="light" />
+          <StatsCard label="Total products" value={g.totalProducts} accent="violet" variant="light" />
+          <StatsCard label="Total orders" value={g.totalOrders} accent="amber" variant="light" />
+          <StatsCard
+            label="Total revenue"
+            value={formatCurrency(g.totalRevenue)}
+            accent="emerald"
+            variant="light"
+          />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-foreground">Monthly sales growth</h3>
+            <p className="mt-0.5 text-xs text-muted">Revenue or volume trend</p>
+            <div className="mt-4">
+              <DashboardLineChart data={g.monthlySales} />
+            </div>
+          </section>
+          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-foreground">Orders trend</h3>
+            <p className="mt-0.5 text-xs text-muted">Month over month</p>
+            <div className="mt-4">
+              <DashboardBarChart data={g.ordersTrend} />
+            </div>
+          </section>
+        </div>
+
+        <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-foreground">Recent activity</h3>
+          <ul className="mt-4 divide-y divide-border">
+            {g.recentOrders.length === 0 ? (
+              <li className="py-8 text-center text-sm text-muted">No recent orders yet.</li>
+            ) : (
+              g.recentOrders.map((o) => (
+                <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                  <div>
+                    <span className="font-medium text-foreground">{o.customerLabel}</span>
+                    <span className="ml-2 text-muted">{formatCurrency(o.total)}</span>
+                    {o.storeName ? (
+                      <span className="mt-0.5 block text-xs text-muted">{o.storeName}</span>
+                    ) : null}
+                  </div>
+                  <span
+                    className={clsx(
+                      "rounded-full px-2 py-0.5 text-xs font-medium capitalize",
+                      o.status === "delivered" && "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+                      o.status === "in_transit" && "bg-cyan-500/15 text-cyan-900 dark:text-cyan-200",
+                      o.status === "pending" && "bg-amber-500/15 text-amber-900 dark:text-amber-200",
+                      o.status === "delivery_failed" && "bg-rose-500/15 text-rose-900 dark:text-rose-200",
+                      o.status === "cancelled" && "bg-zinc-500/15 text-zinc-800 dark:text-zinc-300",
+                    )}
+                  >
+                    {o.status.replace(/_/g, " ")}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      </div>
+    );
+  }
+
+  const { data, isLoading, isError, error } = singleDashQ;
+  const message = getApiErrorMessage(error);
 
   if (isLoading) {
     return (
@@ -60,34 +269,8 @@ export default function VendorDashboardOverviewPage() {
       <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-8 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
         <p className="font-semibold">Could not load vendor dashboard</p>
         <p className="mt-2 text-sm opacity-90">{message}</p>
-        {needsStoreSelection ? (
-          <div className="mt-4 rounded-xl border border-rose-300/60 bg-white/60 p-4 dark:border-rose-800 dark:bg-black/20">
-            <p className="text-sm font-medium">Select a store to continue</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {storesQ.isLoading ? <span className="text-xs opacity-85">Loading stores...</span> : null}
-              {!storesQ.isLoading && activeStores.length === 0 ? (
-                <span className="text-xs opacity-85">No stores available.</span>
-              ) : null}
-              {activeStores.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set("storeId", s.id);
-                    router.replace(`/vendor/dashboard?${params.toString()}`);
-                  }}
-                  className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-medium text-rose-900 transition hover:bg-rose-100 dark:border-rose-700 dark:bg-rose-950/60 dark:text-rose-100 dark:hover:bg-rose-900/60"
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
         <p className="mt-4 text-sm">
-          If you recently became a vendor, your profile may still need approval, 
-          <code className="rounded bg-black/10 px-1"></code>contact support if this persist and try again.
+          If you recently became a vendor, your profile may still need approval — contact support if this persists.
         </p>
       </div>
     );

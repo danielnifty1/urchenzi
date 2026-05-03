@@ -4,6 +4,23 @@ import { apiUserToSession, apiUserToSessionWithOverrides } from "@/lib/auth/mapU
 import { http } from "@/lib/api/client";
 import type { ApiAuthUser, AuthLoginResponse, UserSession } from "@/types";
 
+/** GET /profile — current user + verification flags (replaces legacy GET /auth/me for session refresh). */
+type ProfileResponse = {
+  message?: string;
+  user: ApiAuthUser;
+};
+
+function unwrapProfilePayload(data: unknown): ApiAuthUser {
+  let x: unknown = data;
+  if (x && typeof x === "object" && "data" in x && (x as { data: unknown }).data !== undefined) {
+    x = (x as { data: unknown }).data;
+  }
+  if (x && typeof x === "object" && "user" in x) {
+    return (x as ProfileResponse).user;
+  }
+  return x as ApiAuthUser;
+}
+
 function readAccessToken(data: AuthLoginResponse): string {
   return data.accessToken ?? data.access_token ?? "";
 }
@@ -57,8 +74,8 @@ export async function logoutSession(): Promise<void> {
 }
 
 export async function me(): Promise<UserSession> {
-  const { data } = await http.get<ApiAuthUser | { user: ApiAuthUser }>("/auth/me");
-  const user = "user" in data ? data.user : data;
+  const { data } = await http.get<unknown>("/profile", { skipStoreContext: true });
+  const user = unwrapProfilePayload(data);
   return apiUserToSession(user);
 }
 

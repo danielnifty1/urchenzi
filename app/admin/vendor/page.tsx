@@ -16,6 +16,15 @@ import {
 
 type Tab = "vendors" | "riders" | "users";
 
+function IconView(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={props.className} aria-hidden>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 function DirectoryTable({
   rows,
   notFound,
@@ -51,7 +60,7 @@ function DirectoryTable({
             <th className="px-4 py-3 font-medium">Role</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Id</th>
-            <th className="px-4 py-3 font-medium text-right">Action</th>
+            <th className="px-4 py-3 font-medium text-right">View</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800">
@@ -62,7 +71,27 @@ function DirectoryTable({
                 <td className="px-4 py-3 font-medium text-zinc-200">{row.name}</td>
                 <td className="px-4 py-3 text-zinc-400">{row.email ?? "—"}</td>
                 <td className="px-4 py-3 text-zinc-500">{row.role ?? "—"}</td>
-                <td className="px-4 py-3 text-zinc-500">{row.status ?? "—"}</td>
+                <td className="max-w-[260px] px-4 py-3 text-zinc-500">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span>{row.status ?? "—"}</span>
+                    {row.revalidationPending ? (
+                      <span
+                        className="rounded bg-sky-950/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300"
+                        title="Awaiting admin re-approval after profile change"
+                      >
+                        Re-review
+                      </span>
+                    ) : null}
+                  </div>
+                  {row.rejectionReason ? (
+                    <p
+                      className="mt-1 line-clamp-2 text-xs text-rose-300/90"
+                      title={row.rejectionReason}
+                    >
+                      {row.rejectionReason}
+                    </p>
+                  ) : null}
+                </td>
                 <td className="max-w-[200px] truncate px-4 py-3 font-mono text-xs text-zinc-600" title={row.id}>
                   {row.id}
                 </td>
@@ -70,9 +99,11 @@ function DirectoryTable({
                   {href ? (
                     <Link
                       href={href}
-                      className="font-medium text-emerald-400 hover:text-emerald-300 hover:underline"
+                      title="View"
+                      aria-label="View"
+                      className="inline-flex justify-end text-emerald-400 hover:text-emerald-300"
                     >
-                      Open
+                      <IconView className="h-5 w-5" />
                     </Link>
                   ) : (
                     <span className="text-zinc-600">—</span>
@@ -150,8 +181,8 @@ export default function AdminVendorDirectoryPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Directory</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Browse vendors, riders, and users from the API. For vendors, use <strong className="text-zinc-300">Open</strong>{" "}
-          to jump into that store&apos;s admin workspace — no copy-paste.
+          Browse vendors, riders, and users from the API. Use the <strong className="text-zinc-300">view</strong> icon on
+          vendors to jump into that store&apos;s admin workspace, or on riders to see rider details — no copy-paste.
         </p>
       </div>
 
@@ -192,6 +223,7 @@ export default function AdminVendorDirectoryPage() {
           rows={ridersQ.data?.rows ?? []}
           notFound={ridersQ.data?.notFound ?? false}
           emptyHint="No riders returned."
+          linkForRow={(row) => `/admin/riders/${row.id}`}
         />
       ) : (
         <DirectoryTable

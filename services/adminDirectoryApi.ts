@@ -14,6 +14,10 @@ export type AdminListRow = {
   email?: string;
   role?: string;
   status?: string;
+  /** From admin directory when backend includes it (e.g. riders). */
+  rejectionReason?: string;
+  /** Rider profile paused for admin re-approval after vital-field changes (approved riders only). */
+  revalidationPending?: boolean;
 };
 
 function str(v: unknown): string {
@@ -34,12 +38,18 @@ function rowFromObject(o: Record<string, unknown>): AdminListRow {
     str(o.businessName) ||
     str(o.title) ||
     "(no name)";
+  const rr = str(o.rejectionReason ?? o.rejection_reason);
+  const revRaw = o.revalidationPending ?? o.revalidation_pending ?? o.pendingProfileReview ?? o.pending_profile_review;
+  const revalidationPending =
+    revRaw === true || revRaw === "true" || revRaw === 1 ? true : revRaw === false || revRaw === 0 ? false : undefined;
   return {
     id,
     name,
     email: str(o.email) || undefined,
     role: str(o.role) || undefined,
     status: str(o.status) || undefined,
+    rejectionReason: rr || undefined,
+    ...(revalidationPending === true ? { revalidationPending: true } : {}),
   };
 }
 
@@ -77,6 +87,10 @@ function normalizeList(raw: unknown, kind: "vendors" | "riders" | "users"): Admi
         const v = o.vendor as Record<string, unknown>;
         return rowFromObject({ ...v, ...o, id: o.id ?? v.id });
       }
+      if (o.rider && typeof o.rider === "object") {
+        const r = o.rider as Record<string, unknown>;
+        return rowFromObject({ ...r, ...o, id: o.id ?? r.id });
+      }
       return rowFromObject(o);
     })
     .filter((r): r is AdminListRow => Boolean(r?.id));
@@ -113,6 +127,8 @@ export function fetchAdminVendors(params?: Record<string, string | number | bool
 export function fetchAdminRiders(params?: Record<string, string | number | boolean | undefined>) {
   return getList("/admin/riders", "riders", params);
 }
+
+export { fetchAdminRiderById } from "./adminRiderApi";
 
 /** GET /admin/users — optional role filter (e.g. customer, vendor, rider, admin). */
 export function fetchAdminUsers(params?: Record<string, string | number | boolean | undefined>) {

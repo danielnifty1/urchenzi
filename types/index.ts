@@ -77,6 +77,8 @@ export type ApiAuthUser = {
   email_verified?: boolean;
   isEmailVerified?: boolean;
   is_email_verified?: boolean;
+  /** Backend typo on GET /profile and some auth payloads. */
+  isEmailVerifed?: boolean;
   verified?: boolean;
   email: string;
   createdAt: string;
@@ -101,7 +103,7 @@ export type AuthLoginResponse = {
   user: ApiAuthUser;
 };
 
-export type UserRole = "customer" | "vendor" | "rider" | "admin";
+export type UserRole = "customer" | "vendor" | "rider" | "admin" | "store_manager";
 export type UserStatus = "pending" | "active" | "suspended" | "unverified";
 
 export type UserSession = {

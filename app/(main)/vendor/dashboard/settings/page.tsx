@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth/apiErrors";
 import { vendorDashboardKeys } from "@/lib/vendorDashboard/queryKeys";
+import { getStore, updateStore } from "@/services/vendorStoresApi";
+import { listPaymentBanks, resolveBankAccount } from "@/services/paymentApi";
 import { getVendorSettings, patchVendorSettings } from "@/services/vendorDashboardApi";
 import type { VendorStoreSettings } from "@/types/vendorDashboard";
 import type { VendorCategory } from "@/types";
@@ -45,12 +47,45 @@ export default function VendorSettingsPage() {
     queryKey: [...vendorDashboardKeys.settings(), storeId ?? "none"],
     queryFn: () => getVendorSettings(storeId),
   });
+  const storeQ = useQuery({
+    queryKey: [...vendorDashboardKeys.settings(), "bank", storeId ?? "none"],
+    queryFn: async () => {
+      if (!storeId) return null;
+      return getStore(storeId);
+    },
+    enabled: Boolean(storeId),
+  });
+  const banksQ = useQuery({
+    queryKey: ["payment-banks"],
+    queryFn: ({ signal }) => listPaymentBanks(signal),
+  });
 
   const [draft, setDraft] = useState<VendorStoreSettings | null>(null);
+  const [bankDraft, setBankDraft] = useState({
+    bankName: "",
+    bankAccountName: "",
+    bankAccountNumber: "",
+    bankCode: "",
+  });
 
   useEffect(() => {
     if (data) setDraft(data);
   }, [data]);
+  useEffect(() => {
+    if (!storeQ.data) return;
+    setBankDraft({
+      bankName: storeQ.data.bankName ?? "",
+      bankAccountName: storeQ.data.bankAccountName ?? "",
+      bankAccountNumber: storeQ.data.bankAccountNumber ?? "",
+      bankCode: storeQ.data.bankCode ?? "",
+    });
+  }, [storeQ.data]);
+  useEffect(() => {
+    if (!bankDraft.bankName || bankDraft.bankCode || !banksQ.data?.length) return;
+    const selected = banksQ.data.find((b) => b.name === bankDraft.bankName);
+    if (!selected) return;
+    setBankDraft((d) => ({ ...d, bankCode: selected.code }));
+  }, [banksQ.data, bankDraft.bankName, bankDraft.bankCode]);
 
   const save = useMutation({
     mutationFn: (patch: Partial<VendorStoreSettings>) => patchVendorSettings(patch, storeId),
@@ -60,6 +95,44 @@ export default function VendorSettingsPage() {
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
+  const saveBank = useMutation({
+    mutationFn: async () => {
+      if (!storeId) return;
+      await updateStore(storeId, {
+        bankName: bankDraft.bankName.trim(),
+        bankAccountName: bankDraft.bankAccountName.trim(),
+        bankAccountNumber: bankDraft.bankAccountNumber.replace(/\s/g, "").trim(),
+        bankCode: bankDraft.bankCode.trim() || null,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Bank details updated");
+      void queryClient.invalidateQueries({ queryKey: [...vendorDashboardKeys.settings(), "bank", storeId ?? "none"] });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+  const resolveBankMut = useMutation({
+    mutationFn: ({ accountNumber, bankCode }: { accountNumber: string; bankCode: string }) =>
+      resolveBankAccount(accountNumber, bankCode),
+    onSuccess: (data) => {
+      if (data.accountName) {
+        setBankDraft((d) => ({ ...d, bankAccountName: data.accountName }));
+      }
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  useEffect(() => {
+    const accountNumber = bankDraft.bankAccountNumber.replace(/\D/g, "");
+    if (!bankDraft.bankCode || accountNumber.length !== 10) {
+      setBankDraft((d) => ({ ...d, bankAccountName: "" }));
+      return;
+    }
+    setBankDraft((d) => ({ ...d, bankAccountName: "" }));
+    resolveBankMut.mutate({ accountNumber, bankCode: bankDraft.bankCode });
+  }, [bankDraft.bankAccountNumber, bankDraft.bankCode]);
+  const isBankAccountReady = bankDraft.bankAccountNumber.replace(/\D/g, "").length === 10;
+  const isBankAccountNameResolved = bankDraft.bankAccountName.trim().length > 0;
 
   if (isLoading || !draft) {
     return (
@@ -86,8 +159,9 @@ export default function VendorSettingsPage() {
         </p>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
       <form
-        className="max-w-xl space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-sm"
+        className="w-full space-y-6 rounded-2xl border border-border bg-surface p-6 md:p-8 shadow-sm"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate(buildSettingsPatch(draft));
@@ -262,6 +336,103 @@ export default function VendorSettingsPage() {
           </button>
         </div>
       </form>
+      <form
+        className="w-full space-y-6 rounded-2xl border border-border bg-surface p-6 md:p-8 shadow-sm lg:self-start"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (
+            !bankDraft.bankName.trim() ||
+            !bankDraft.bankAccountName.trim() ||
+            !bankDraft.bankAccountNumber.trim() ||
+            !bankDraft.bankCode.trim()
+          ) {
+            toast.error("Select a bank and enter a valid account number to resolve account name.");
+            return;
+          }
+          saveBank.mutate();
+        }}
+      >
+        <h4 className="text-sm font-semibold text-foreground">Payout bank details</h4>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground" htmlFor="bankName">
+              Bank name
+            </label>
+            <select
+              id="bankName"
+              value={bankDraft.bankName}
+              onChange={(e) => {
+                const selected = banksQ.data?.find((b) => b.name === e.target.value);
+                setBankDraft((d) => ({
+                  ...d,
+                  bankName: e.target.value,
+                  bankCode: selected?.code ?? "",
+                }));
+              }}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
+            >
+              <option value="">
+                {banksQ.isLoading ? "Loading banks..." : "Select bank"}
+              </option>
+              {(banksQ.data ?? []).map((bank) => (
+                <option key={`${bank.code}-${bank.name}-${bank.id}`} value={bank.name}>
+                  {bank.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground" htmlFor="bankAccountName">
+              <span>Account name</span>
+              {resolveBankMut.isPending ? (
+                <span
+                  className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#00A082] border-t-transparent"
+                  aria-label="Resolving account name"
+                />
+              ) : null}
+            </label>
+            <input
+              id="bankAccountName"
+              value={bankDraft.bankAccountName}
+              readOnly
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
+              placeholder={resolveBankMut.isPending ? "Resolving account name..." : "Account Name"}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground" htmlFor="bankAccountNumber">
+              Account number
+            </label>
+            <input
+              id="bankAccountNumber"
+              value={bankDraft.bankAccountNumber}
+              onChange={(e) =>
+                setBankDraft((d) => ({
+                  ...d,
+                  bankAccountNumber: e.target.value.replace(/\D/g, "").slice(0, 10),
+                }))
+              }
+              maxLength={10}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-foreground outline-none ring-[#00A082]/30 focus:ring-2"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end border-t border-border pt-4">
+          <button
+            type="submit"
+            disabled={
+              saveBank.isPending ||
+              resolveBankMut.isPending ||
+              !isBankAccountReady ||
+              !isBankAccountNameResolved
+            }
+            className="rounded-xl bg-[#00A082] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#00A082]/20 transition hover:bg-[#008f72] disabled:opacity-50"
+          >
+            {saveBank.isPending ? "Updating…" : "Update bank details"}
+          </button>
+        </div>
+      </form>
+      </div>
     </div>
   );
 }
